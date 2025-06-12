@@ -1,7 +1,7 @@
 #include "FS.h"
 #include "globals.h" // Expected to define frame_status_t, STARTUP, SD_CARD_ERROR, NO_FILES, PLAYING_ART, PANEL_RES_X, PANEL_RES_Y, PANEL_CHAIN
 #include "gif.h"     // Expected to define InitMatrixGif(), ShowGIF()
-#include "sdcard.h"      // Include our new SD handler header
+#include "sdcard.h"  // Include our updated SD handler header
 #include <AnimatedGIF.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 #include <SPI.h>
@@ -61,7 +61,7 @@ void setup() {
     dma_display->setTextSize(1);
     dma_display->print("Booting...");
 
-    // --- Initialize SD card using the new function ---
+    // --- Initialize SD card using the existing function ---
     if (!initSD(dma_display)) {
         // SD card failed to initialize, halt or enter error state
         target_state = SD_CARD_ERROR;
@@ -70,39 +70,82 @@ void setup() {
         }
     }
 
-    // --- List directories on root using the new function ---
-    //listRootDirectories(dma_display);
-
     InitMatrixGif(); // This function is expected to be defined in "gif.h"
 
-    // --- Fetch all filenames into the vector using the new function ---
-    if (!loadGifFilePaths(dma_display)) {
+    // --- Count total GIFs first ---
+    if (!countTotalGifs(dma_display)) {
         // No GIF files found or directory failed to open
         target_state = NO_FILES;
         while(1) {
             delay(5000); // Stay in error state
         }
-    } else {
-        gifsLoaded = true;
-        target_state = PLAYING_ART;
     }
+
+    // Initialize batch processing variables
+    current_batch_start = 0;
+    batch_processing_complete = false;
+    gifsLoaded = true;
+    target_state = PLAYING_ART;
+    
+    Serial.printf("Setup complete. Found %lu total GIFs. Ready to start batch processing.\n", total_gifs_count);
 }
 
 void loop() {
-    if (gifFilePaths.empty() || !gifsLoaded) {
-        Serial.println("No GIFs to play. Looping...");
+    if (total_gifs_count == 0) {
+        Serial.println("No GIFs found. Looping...");
         delay(5000);
         return;
     }
 
-    while (true) // Loop through the GIFs indefinitely
-    {
-        for (const String& path : gifFilePaths) {
-            current_gif = path;
-            Serial.printf("Playing: %s\n", path.c_str());
-            ShowGIF(path.c_str()); // Play GIF using the stored path. ShowGIF() is expected to be defined in "gif.h"
-            delay(100); // Small delay between GIFs
+    // Main batch processing loop
+    while (true) {
+        // Check if we need to start over from the beginning
+        if (current_batch_start >= total_gifs_count) {
+            Serial.println("Completed all GIFs! Starting over from the beginning...");
+            current_batch_start = 0;
+            batch_processing_complete = false;
+            delay(2000); // Pause before restarting the entire cycle
         }
-        delay(1000); // Pause before restarting the loop through all GIFs
+
+        // Load the next batch of GIFs
+        Serial.printf("Loading batch starting from GIF #%lu (Batch size: %d)\n", current_batch_start + 1, BATCH_SIZE);
+        if (!loadNextGifBatch(dma_display)) {
+            Serial.println("Failed to load GIF batch! Retrying...");
+            delay(2000);
+            continue; // Retry loading the same batch
+        }
+
+        // Play all GIFs in the current batch
+        Serial.printf("Playing %lu GIFs in current batch...\n", gifFilePaths.size());
+        for (size_t i = 0; i < gifFilePaths.size(); i++) {
+            const char* path = gifFilePaths[i];
+            current_gif = String(path);
+            
+            Serial.printf("Playing GIF #%lu: %s\n", current_batch_start + i + 1, path);
+            
+            // Display progress on matrix
+            if(SHOW_PROGRESS) {
+                char progress_msg[32];
+                sprintf(progress_msg, "GIF %lu/%lu", current_batch_start + i + 1, total_gifs_count);
+                displayStatus(dma_display, progress_msg, dma_display->color565(0, 255, 255));
+                delay(500); // Brief pause to show progress
+            }
+            
+            ShowGIF(path); // Play GIF using the stored path
+            delay(100); // Small delay between GIFs
+            
+            yield(); // Allow other tasks to run
+        }
+
+        // Move to the next batch
+        current_batch_start += BATCH_SIZE;
+        
+        Serial.printf("Batch complete. Next batch will start from GIF #%lu\n", current_batch_start + 1);
+        
+        // Clear current batch from memory before loading the next one
+        clearGifFilePaths();
+        
+        // Show memory status
+        Serial.printf("Free heap after batch: %lu bytes\n", ESP.getFreeHeap());
     }
 }

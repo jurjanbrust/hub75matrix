@@ -7,6 +7,7 @@
 #define GIF_DIR "/gifs"
 #define FILESYSTEM sd  // Changed from LittleFS to sd
 #define FORMAT_LITTLEFS_IF_FAILED true
+#define SHOW_PROGRESS false // Show progress on the matrix display
 
 #define PANEL_RES_X 64     // Number of pixels wide of each INDIVIDUAL panel module.
 #define PANEL_RES_Y 32     // Number of pixels tall of each INDIVIDUAL panel module.

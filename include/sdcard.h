@@ -1,30 +1,32 @@
-#ifndef SD_HANDLER_H
-#define SD_HANDLER_H
+#ifndef SDCARD_H
+#define SDCARD_H
 
-#include <Arduino.h>
 #include <SdFat.h>
+#include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 #include <vector>
-#include <ESP32-HUB75-MatrixPanel-I2S-DMA.h> // For MatrixPanel_I2S_DMA pointer
 
-// Define a generous maximum path length for your GIFs. Adjust if your paths are exceptionally long.
-// E.g., "/gifs/" (6 chars) + 128 chars for filename + .gif (4 chars) + null (1 char) = 139. 256 is safe.
+// Constants
+#define BATCH_SIZE 10
 #define MAX_GIF_PATH_LEN 256
-#define MAX_GIFS_TO_LOAD 100 // Limit the number of GIFs to load to prevent memory issues
 
-// External declarations for global SD-related variables
+// Global SD-related variables
 extern SdFs sd;
 extern bool sdError;
-extern std::vector<char*> gifFilePaths; // <<-- CHANGED: Now a vector of C-style strings
+extern std::vector<char*> gifFilePaths;
 extern unsigned long total_files;
-extern String current_gif; // Keep this as String for now, if it's used elsewhere as such.
+extern String current_gif;
 
-// Function prototypes for SD card operations
+// Batch processing variables
+extern unsigned long total_gifs_count;
+extern unsigned long current_batch_start;
+extern bool batch_processing_complete;
+
+// Function declarations
 bool initSD(MatrixPanel_I2S_DMA *dma_display);
 void listRootDirectories(MatrixPanel_I2S_DMA *dma_display);
-bool loadGifFilePaths(MatrixPanel_I2S_DMA *dma_display);
+bool countTotalGifs(MatrixPanel_I2S_DMA *dma_display);
+bool loadNextGifBatch(MatrixPanel_I2S_DMA *dma_display);
+void clearGifFilePaths();
 void displayStatus(MatrixPanel_I2S_DMA *dma_display, const char* message, uint16_t color);
 
-// New utility to free the allocated paths when done (CRITICAL for memory management!)
-void clearGifFilePaths();
-
-#endif // SD_HANDLER_H
+#endif
