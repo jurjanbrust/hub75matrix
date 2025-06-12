@@ -1,31 +1,25 @@
 #include "FS.h"
-#include "globals.h"
-#include "gif.h"
-#include <LittleFS.h>
+#include "globals.h" // Expected to define frame_status_t, STARTUP, SD_CARD_ERROR, NO_FILES, PLAYING_ART, PANEL_RES_X, PANEL_RES_Y, PANEL_CHAIN
+#include "gif.h"     // Expected to define InitMatrixGif(), ShowGIF()
+#include "sdcard.h"      // Include our new SD handler header
 #include <AnimatedGIF.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
-#include <vector> // Include for std::vector
+#include <SPI.h>
+#include <vector>
 
-// #define R1_PIN 25
-// #define G1_PIN 26
-// #define B1_PIN 27
-// #define R2_PIN 14
-// #define G2_PIN 12
-// #define B2_PIN 13
-// #define A_PIN 23
-// #define B_PIN 19
-// #define C_PIN 5
-// #define D_PIN 17
-// #define E_PIN -1 // required for 1/32 scan panels, like 64x64px. Any available pin would do, i.e. IO32
-// #define LAT_PIN 4
-// #define OE_PIN 15
-// #define CLK_PIN 16
+// Global variables from globals.h (if they are not extern in globals.h already)
+frame_status_t target_state = STARTUP;
+unsigned long lastStateChange = 0;
+bool interruptGif = false;
+bool gifsLoaded = false;
+int brightness = 128;
+bool autoPlay = true;
+bool gifPlaying = false;
+bool allowNextGif = true;
+bool queue_populate_requred = false;
 
-//MatrixPanel_I2S_DMA dma_display;
+// Matrix display pointer
 MatrixPanel_I2S_DMA *dma_display = nullptr;
-
-// Vector to store file paths
-std::vector<String> gifFilePaths;
 
 // We'll define these colors once dma_display is initialized in setup()
 uint16_t myBLACK;
@@ -37,13 +31,22 @@ uint16_t myBLUE;
 /************************* Arduino Sketch Setup and Loop() *******************************/
 void setup() {
     Serial.begin(115200);
+    delay(1000); // Give serial time to initialize
 
-    InitMatrixGif();
+    Serial.println("Initializing HUB75 Matrix Display...");
 
-    if(!LittleFS.begin(FORMAT_LITTLEFS_IF_FAILED)){
-        Serial.println("LittleFS Mount Failed");
-        return;
-    }
+    // Initialize HUB75 display first
+    HUB75_I2S_CFG mxconfig(
+        PANEL_RES_X,    // module width
+        PANEL_RES_Y,    // module height
+        PANEL_CHAIN     // Chain of panels - Horizontal width only.
+    );
+
+    // Display Setup
+    dma_display = new MatrixPanel_I2S_DMA(mxconfig);
+    dma_display->begin();
+    dma_display->setBrightness8(brightness); //0-255
+    dma_display->clearScreen();
 
     // Initialize display colors after dma_display is created
     myBLACK = dma_display->color565(0, 0, 0);
@@ -52,66 +55,52 @@ void setup() {
     myGREEN = dma_display->color565(0, 255, 0);
     myBLUE = dma_display->color565(0, 0, 255);
 
+    dma_display->fillScreen(myBLACK);
+    dma_display->setCursor(0, 0);
+    dma_display->setTextColor(myWHITE);
+    dma_display->setTextSize(1);
+    dma_display->print("Booting...");
 
-    HUB75_I2S_CFG mxconfig(
-        PANEL_RES_X,    // module width
-        PANEL_RES_Y,    // module height
-        PANEL_CHAIN     // Chain of panels - Horizontal width only.
-    );
-
-    // mxconfig.gpio.e = 18;
-    // mxconfig.clkphase = false;
-    // mxconfig.driver = HUB75_I2S_CFG::FM6126A;
-
-    // Display Setup
-    dma_display = new MatrixPanel_I2S_DMA(mxconfig);
-    dma_display->begin();
-    dma_display->setBrightness8(128); //0-255
-    dma_display->clearScreen();
-    dma_display->fillScreen(myWHITE);
-
-    // --- NEW: Fetch all filenames into the vector ---
-    Serial.println("Fetching GIF filenames...");
-    File root = FILESYSTEM.open(GIF_DIR);
-    if (!root) {
-        Serial.println("Failed to open /gifs directory!");
-        return;
-    }
-
-    File file = root.openNextFile();
-    while (file) {
-        if (!file.isDirectory()) {
-            String filePath = file.path();
-            if (filePath.endsWith(".gif") || filePath.endsWith(".GIF")) { // Optional: Filter for .gif extension
-                gifFilePaths.push_back(filePath);
-                Serial.print("Found GIF: ");
-                Serial.println(filePath);
-            }
+    // --- Initialize SD card using the new function ---
+    if (!initSD(dma_display)) {
+        // SD card failed to initialize, halt or enter error state
+        target_state = SD_CARD_ERROR;
+        while(1) {
+            delay(1000); // Stay in error state
         }
-        file.close(); // Close the current file handle
-        file = root.openNextFile(); // Get the next one
     }
-    root.close(); // Close the directory handle
 
-    if (gifFilePaths.empty()) {
-        Serial.println("No GIF files found in /gifs directory!");
+    // --- List directories on root using the new function ---
+    listRootDirectories(dma_display);
+
+    InitMatrixGif(); // This function is expected to be defined in "gif.h"
+
+    // --- Fetch all filenames into the vector using the new function ---
+    if (!loadGifFilePaths(dma_display)) {
+        // No GIF files found or directory failed to open
+        target_state = NO_FILES;
+        while(1) {
+            delay(5000); // Stay in error state
+        }
     } else {
-        Serial.printf("Total GIFs found: %d\n", gifFilePaths.size());
+        gifsLoaded = true;
+        target_state = PLAYING_ART;
     }
 }
 
-void loop()
-{
-    if (gifFilePaths.empty()) {
+void loop() {
+    if (gifFilePaths.empty() || !gifsLoaded) {
         Serial.println("No GIFs to play. Looping...");
-        delay(5000); // Wait a bit if no GIFs are found
+        delay(5000);
         return;
     }
 
     while (true) // Loop through the GIFs indefinitely
     {
         for (const String& path : gifFilePaths) {
-            ShowGIF(path.c_str()); // Play GIF using the stored path
+            current_gif = path;
+            Serial.printf("Playing: %s\n", path.c_str());
+            ShowGIF(path.c_str()); // Play GIF using the stored path. ShowGIF() is expected to be defined in "gif.h"
             delay(100); // Small delay between GIFs
         }
         delay(1000); // Pause before restarting the loop through all GIFs

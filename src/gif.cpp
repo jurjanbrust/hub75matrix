@@ -1,12 +1,11 @@
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 #include <AnimatedGIF.h>
-#include <LittleFS.h>
-// #include <SdFat.h>
+#include <SdFat.h>
 #include "Globals.h"
 
 int x_offset, y_offset;
 AnimatedGIF gif;
-File f; // This 'f' will now be used by the GIF callbacks directly
+FsFile f; // Changed from File to FsFile for SdFat compatibility
 
 void InitMatrixGif()
 {
@@ -102,7 +101,7 @@ void * GIFOpenFile(const char *fname, int32_t *pSize)
 {
     Serial.print("Playing gif: ");
     Serial.println(fname);
-    f = FILESYSTEM.open(fname); // Use the global 'f'
+    f = FILESYSTEM.open(fname); // Use the global 'f' with SD filesystem
     if (f)
     {
         *pSize = f.size();
@@ -113,7 +112,7 @@ void * GIFOpenFile(const char *fname, int32_t *pSize)
 
 void GIFCloseFile(void *pHandle)
 {
-    File *fp = static_cast<File *>(pHandle);
+    FsFile *fp = static_cast<FsFile *>(pHandle); // Changed to FsFile*
     if (fp != NULL)
         fp->close(); // Close the file pointed to by pHandle
 } /* GIFCloseFile() */
@@ -122,7 +121,7 @@ int32_t GIFReadFile(GIFFILE *pFile, uint8_t *pBuf, int32_t iLen)
 {
     int32_t iBytesRead;
     iBytesRead = iLen;
-    File *fp = static_cast<File *>(pFile->fHandle); // Cast to File*
+    FsFile *fp = static_cast<FsFile *>(pFile->fHandle); // Cast to FsFile*
     // Note: If you read a file all the way to the last byte, seek() stops working
     if ((pFile->iSize - pFile->iPos) < iLen)
         iBytesRead = pFile->iSize - pFile->iPos - 1; // <-- ugly work-around
@@ -136,7 +135,7 @@ int32_t GIFReadFile(GIFFILE *pFile, uint8_t *pBuf, int32_t iLen)
 int32_t GIFSeekFile(GIFFILE *pFile, int32_t iPosition)
 {
     int i = micros();
-    File *fp = static_cast<File *>(pFile->fHandle); // Cast to File*
+    FsFile *fp = static_cast<FsFile *>(pFile->fHandle); // Cast to FsFile*
     fp->seek(iPosition);
     pFile->iPos = (int32_t)fp->position();
     i = micros() - i;

@@ -5,12 +5,18 @@
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 
 #define GIF_DIR "/gifs"
-#define FILESYSTEM LittleFS
+#define FILESYSTEM sd  // Changed from LittleFS to sd
 #define FORMAT_LITTLEFS_IF_FAILED true
 
 #define PANEL_RES_X 64     // Number of pixels wide of each INDIVIDUAL panel module.
 #define PANEL_RES_Y 32     // Number of pixels tall of each INDIVIDUAL panel module.
 #define PANEL_CHAIN 2      // Total number of panels chained one to another horizontally only.
+
+// SD Card pin definitions
+#define SD_CS_PIN    22     // SD card chip select pin
+#define SD_MISO_PIN  32    // SD card MISO pin
+#define SD_MOSI_PIN  21    // SD card MOSI pin  
+#define SD_SCK_PIN   33    // SD card SCK pin
 
 typedef enum {
     OFF = 0, // LED matrix is off
