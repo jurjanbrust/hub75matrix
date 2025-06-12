@@ -71,7 +71,7 @@ void setup() {
     }
 
     // --- List directories on root using the new function ---
-    listRootDirectories(dma_display);
+    //listRootDirectories(dma_display);
 
     InitMatrixGif(); // This function is expected to be defined in "gif.h"
 
