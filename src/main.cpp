@@ -73,7 +73,7 @@ void setup() {
 
     InitMatrixGif(); // This function is expected to be defined in "gif.h"
 
-    setupWifi();
+    setupWifi(); // This now also sets up the web API
 
     // --- Count total GIFs first ---
     if (!countTotalGifs(dma_display)) {
@@ -94,6 +94,9 @@ void setup() {
 }
 
 void loop() {
+    // Handle web API requests
+    handleWebAPIRequests();
+    
     if (total_gifs_count == 0) {
         Serial.println("No GIFs found. Looping...");
         delay(5000);
@@ -102,6 +105,9 @@ void loop() {
 
     // Main batch processing loop
     while (true) {
+        // Handle web API requests during GIF processing
+        handleWebAPIRequests();
+        
         // Check if we need to start over from the beginning
         if (current_batch_start >= total_gifs_count) {
             Serial.println("Completed all GIFs! Starting over from the beginning...");
@@ -138,6 +144,7 @@ void loop() {
             delay(100); // Small delay between GIFs
             
             yield(); // Allow other tasks to run
+            handleWebAPIRequests(); // Handle API requests between GIFs
         }
 
         // Move to the next batch
