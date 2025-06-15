@@ -1,6 +1,7 @@
 #include "portal.h"
 #include "globals.h"
 #include "sdcard.h"
+#include "settings.h"
 
 WebServer server(80);
 WiFiManager wm;
@@ -33,7 +34,7 @@ void setupWifi() {
     else {
         //if you get here you have connected to the WiFi    
         Serial.println("connected...");
-        displayStatus(dma_display, "WIFI connected", WiFi.localIP().toString().c_str(), dma_display->color565(0, 255, 0));
+        displayStatus(dma_display, "WIFI connected", WiFi.localIP().toString().c_str(), dma_display->color565(0, 0, 255));
         delay(3000);
         // Start the web API after successful WiFi connection
         setupWebAPI();
