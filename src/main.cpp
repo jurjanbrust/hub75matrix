@@ -2,6 +2,7 @@
 #include "globals.h" // Expected to define frame_status_t, STARTUP, SD_CARD_ERROR, NO_FILES, PLAYING_ART, PANEL_RES_X, PANEL_RES_Y, PANEL_CHAIN
 #include "gif.h"     // Expected to define InitMatrixGif(), ShowGIF()
 #include "sdcard.h"  // Include our updated SD handler header
+#include "portal.h"  // Include WiFi portal setup header
 #include <AnimatedGIF.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 #include <SPI.h>
@@ -71,6 +72,8 @@ void setup() {
     }
 
     InitMatrixGif(); // This function is expected to be defined in "gif.h"
+
+    setupWifi();
 
     // --- Count total GIFs first ---
     if (!countTotalGifs(dma_display)) {

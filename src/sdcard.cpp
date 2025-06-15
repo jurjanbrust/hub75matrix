@@ -107,10 +107,10 @@ void listRootDirectories(MatrixPanel_I2S_DMA *dma_display) {
 }
 
 // Function to count total number of GIF files without loading them into memory
+
+// Optimized function to count total number of files in GIF_DIR
+// (Previously counted only GIF files, now counts all files)
 bool countTotalGifs(MatrixPanel_I2S_DMA *dma_display) {
-    Serial.println("Counting total GIF files...");
-    displayStatus(dma_display, "Counting GIFs...", dma_display->color565(255, 255, 255));
-    
     FsFile gifRoot = sd.open(GIF_DIR);
     if (!gifRoot) {
         Serial.println("Failed to open /gifs directory on SD card!");
@@ -120,26 +120,13 @@ bool countTotalGifs(MatrixPanel_I2S_DMA *dma_display) {
 
     FsFile file;
     total_gifs_count = 0;
-    unsigned long lastYieldTime = millis();
 
     while (file.openNext(&gifRoot, O_RDONLY)) {
-        yield();
+        yield(); 
         if (file.isFile()) {
-            char fileName[256];
-            file.getName(fileName, sizeof(fileName));
-            
-            String fileNameStr = String(fileName);
-            fileNameStr.toLowerCase();
-            if (fileNameStr.endsWith(".gif")) {
-                total_gifs_count++;
-            }
+            total_gifs_count++;
         }
         file.close();
-
-        if (millis() - lastYieldTime > 50) {
-            yield();
-            lastYieldTime = millis();
-        }
     }
     gifRoot.close();
 
@@ -149,11 +136,6 @@ bool countTotalGifs(MatrixPanel_I2S_DMA *dma_display) {
         return false;
     }
 
-    Serial.printf("Total GIFs found: %lu\n", total_gifs_count);
-    char msg[32];
-    sprintf(msg, "Total: %lu GIFs", total_gifs_count);
-    displayStatus(dma_display, msg, dma_display->color565(0, 255, 0));
-    delay(2000);
     return true;
 }
 
