@@ -4,6 +4,7 @@
 #include "sdcard.h"  // Include our updated SD handler header
 #include "portal.h"  // Include WiFi portal setup header
 #include "settings.h" // Include Preferences for storing settings
+#include "filesystem.h" // Include LittleFS filesystem handler
 #include <AnimatedGIF.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 #include <SPI.h>
@@ -68,6 +69,18 @@ void setup() {
 
     Serial.printf("Display initialized with brightness: %d\n", brightness);
 
+    // --- Initialize LittleFS for web files ---
+    if (!initLittleFS()) {
+        Serial.println("LittleFS initialization failed!");
+        dma_display->fillScreen(myBLACK);
+        dma_display->setCursor(0, 0);
+        dma_display->setTextColor(myRED);
+        dma_display->print("LittleFS Error");
+        // Continue anyway, as LittleFS is only for web interface
+    } else {
+        Serial.println("LittleFS initialized successfully");
+    }
+
     // --- Initialize SD card using the existing function ---
     if (!initSD(dma_display)) {
         // SD card failed to initialize, halt or enter error state
@@ -79,7 +92,7 @@ void setup() {
 
     InitMatrixGif(); // This function is expected to be defined in "gif.h"
 
-    setupWifi(); // This now also sets up the web API
+    setupWifi(); // This now also sets up the web API with LittleFS
 
     // --- Count total GIFs first ---
     if (!countTotalGifs(dma_display)) {
