@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image to 128x32 Editor</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/converter.css">
+    <script src="js/gif.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">
+                <span class="pixel-icon">◼</span>
+                Pixel Matrix FX Control
+            </h1>
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-label">Status:</span>
+                    <span class="status-value connected">Connected</span>
+                </div>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="index.html">Device Info</a></li>
+                <li><a href="converter.html">Image Converter</a></li>
+                    <li><a href="api.html">API Docs</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <div class="editor-grid">
+            <div class="panel">
+                <h3>📁 Source Image</h3>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">🖼️</div>
+                    <div class="upload-text">Drop your image here or click to browse</div>
+                    <div class="upload-hint">Supports GIF & JPEG formats • Max 10MB</div>
+                </div>
+                <input type="file" id="fileInput" accept=".gif,.jpg,.jpeg" class="hidden">
+                
+                <div id="originalPreview" class="preview-container hidden">
+                    <div class="preview-box">
+                        <div class="preview-label">Original</div>
+                        <img id="originalImage" alt="Original">
+                        <div class="size-info" id="originalSize"></div>
+                    </div>
+                </div>
+
+                <div class="controls" id="controls" style="display: none;">
+                    <div class="control-group">
+                        <label for="resizeMode">Resize Method:</label>
+                        <select id="resizeMode">
+                            <option value="cover">Smart Crop (Fill 128×32)</option>
+                            <option value="contain">Fit Inside (Maintain Aspect)</option>
+                            <option value="stretch">Stretch to Fit</option>
+                            <option value="scroll-top" selected>Animated Scroll (Top to Bottom)</option>
+                            <option value="scroll-bottom">Animated Scroll (Bottom to Top)</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group" id="animationControls" style="display: none;">
+                        <label for="frameRate">Animation Speed: <span class="range-value" id="frameRateValue">10</span> FPS</label>
+                        <input type="range" id="frameRate" min="5" max="30" value="10">
+                        
+                        <label for="scrollSpeed">Scroll Speed: <span class="range-value" id="scrollSpeedValue">2</span> px/frame</label>
+                        <input type="range" id="scrollSpeed" min="1" max="8" value="2">
+                    </div>
+
+                    <div class="control-group">
+                        <label for="quality">JPEG Quality: <span class="range-value" id="qualityValue">90</span></label>
+                        <input type="range" id="quality" min="10" max="100" value="90">
+                    </div>
+
+                    <button class="btn" id="convertBtn">Convert to 128×32</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>🎯 128×32 Result</h3>
+                
+                <div id="processing" class="processing hidden">
+                    <div class="spinner"></div>
+                    <p>Converting to 128×32...</p>
+                </div>
+
+                <div id="resultPreview" class="preview-container hidden">
+                    <div class="preview-box">
+                        <div class="preview-label">128×32 Result</div>
+                        <img id="resultImage" alt="Converted">
+                        <div class="size-info">128 × 32 pixels</div>
+                    </div>
+                    <div id="gifProgressBarContainer" style="display:none; margin: 10px 0;">
+                        <div style="background:#e2e8f0; border-radius:8px; height:18px; width:100%; overflow:hidden;">
+                            <div id="gifProgressBar" style="background:linear-gradient(90deg,#667eea,#764ba2);height:100%;width:0%;transition:width 0.2s;"></div>
+                        </div>
+                        <div id="gifProgressText" style="text-align:center;font-size:0.95em;color:#444;margin-top:2px;">Rendering GIF: 0%</div>
+                    </div>
+                    <button class="btn btn-download" id="downloadBtn">Download 128×32 Image</button>
+                </div>
+
+                <div id="stats" class="stats hidden">
+                    <h4>📊 Conversion Stats</h4>
+                    <p id="originalDimensions"></p>
+                    <p id="compressionRatio"></p>
+                    <p id="fileSize"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class GifTo128x32Editor {
+            constructor() {
+                this.originalImage = null;
+                this.canvas = document.createElement('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.initializeEventListeners();
+            }
+
+            initializeEventListeners() {
+                const uploadArea = document.getElementById('uploadArea');
+                const fileInput = document.getElementById('fileInput');
+                const convertBtn = document.getElementById('convertBtn');
+                const downloadBtn = document.getElementById('downloadBtn');
+                const qualitySlider = document.getElementById('quality');
+
+                // Upload area events
+                uploadArea.addEventListener('click', () => fileInput.click());
+                uploadArea.addEventListener('dragover', this.handleDragOver.bind(this));
+                uploadArea.addEventListener('dragleave', this.handleDragLeave.bind(this));
+                uploadArea.addEventListener('drop', this.handleDrop.bind(this));
+
+                // File input
+                fileInput.addEventListener('change', this.handleFileSelect.bind(this));
+
+                // Convert button
+                convertBtn.addEventListener('click', this.convertImage.bind(this));
+
+                // Download button
+                downloadBtn.addEventListener('click', this.downloadImage.bind(this));
+
+                // Quality slider
+                qualitySlider.addEventListener('input', (e) => {
+                    document.getElementById('qualityValue').textContent = e.target.value;
+                });
+
+                // Resize mode change
+                document.getElementById('resizeMode').addEventListener('change', this.handleResizeModeChange.bind(this));
+
+                // Animation controls
+                document.getElementById('frameRate').addEventListener('input', (e) => {
+                    document.getElementById('frameRateValue').textContent = e.target.value;
+                });
+
+                document.getElementById('scrollSpeed').addEventListener('input', (e) => {
+                    document.getElementById('scrollSpeedValue').textContent = e.target.value;
+                });
+            }
+
+            handleDragOver(e) {
+                e.preventDefault();
+                document.getElementById('uploadArea').classList.add('dragover');
+            }
+
+            handleDragLeave(e) {
+                e.preventDefault();
+                document.getElementById('uploadArea').classList.remove('dragover');
+            }
+
+            handleDrop(e) {
+                e.preventDefault();
+                document.getElementById('uploadArea').classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    this.processFile(files[0]);
+                }
+            }
+
+            handleFileSelect(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    this.processFile(file);
+                }
+            }
+
+            processFile(file) {
+                if (!file.type.includes('gif') && !file.type.includes('jpeg') && !file.type.includes('jpg')) {
+                    alert('Please select a GIF or JPEG file.');
+                    return;
+                }
+
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('File size must be less than 10MB.');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.loadImage(e.target.result, file);
+                };
+                reader.readAsDataURL(file);
+            }
+
+            loadImage(src, file) {
+                const img = new Image();
+                img.onload = () => {
+                    this.originalImage = img;
+                    this.originalFile = file;
+                    this.displayOriginalImage(img);
+                    this.showControls();
+                };
+                img.src = src;
+            }
+
+            displayOriginalImage(img) {
+                const originalImg = document.getElementById('originalImage');
+                const originalSize = document.getElementById('originalSize');
+                const originalPreview = document.getElementById('originalPreview');
+
+                originalImg.src = img.src;
+                originalSize.textContent = `${img.width} × ${img.height} pixels`;
+                originalPreview.classList.remove('hidden');
+            }
+
+            handleResizeModeChange(e) {
+                const animationControls = document.getElementById('animationControls');
+                if (e.target.value === 'scroll-top' || e.target.value === 'scroll-bottom') {
+                    animationControls.style.display = 'block';
+                } else {
+                    animationControls.style.display = 'none';
+                }
+            }
+
+            showControls() {
+                document.getElementById('controls').style.display = 'block';
+                // Check if default mode needs animation controls
+                this.handleResizeModeChange({ target: { value: 'scroll-top' } });
+            }
+
+            convertImage() {
+                if (!this.originalImage) return;
+
+                const processing = document.getElementById('processing');
+                const resultPreview = document.getElementById('resultPreview');
+                const stats = document.getElementById('stats');
+
+                processing.classList.remove('hidden');
+                resultPreview.classList.add('hidden');
+                stats.classList.add('hidden');
+
+                // Small delay to show processing animation
+                setTimeout(() => {
+                    this.performConversion();
+                }, 100);
+            }
+
+            performConversion() {
+                const resizeMode = document.getElementById('resizeMode').value;
+                const quality = parseInt(document.getElementById('quality').value) / 100;
+
+                if (resizeMode === 'scroll-top' || resizeMode === 'scroll-bottom') {
+                    this.createScrollingGif(resizeMode);
+                } else {
+                    // Set canvas to target size
+                    this.canvas.width = 128;
+                    this.canvas.height = 32;
+
+                    // Clear canvas
+                    this.ctx.clearRect(0, 0, 128, 32);
+
+                    // Calculate dimensions based on resize mode
+                    const { sx, sy, sw, sh, dx, dy, dw, dh } = this.calculateDimensions(
+                        this.originalImage.width,
+                        this.originalImage.height,
+                        resizeMode
+                    );
+
+                    // Draw image
+                    this.ctx.drawImage(this.originalImage, sx, sy, sw, sh, dx, dy, dw, dh);
+
+                    // Convert to data URL
+                    const dataUrl = this.canvas.toDataURL('image/jpeg', quality);
+
+                    // Display result
+                    this.displayResult(dataUrl);
+                    this.updateStats();
+                }
+            }
+
+            async createScrollingGif(scrollDirection) {
+                const frameRate = parseInt(document.getElementById('frameRate').value);
+                const scrollSpeed = parseInt(document.getElementById('scrollSpeed').value);
+                
+                // Create a canvas for the full-height image
+                const fullCanvas = document.createElement('canvas');
+                const fullCtx = fullCanvas.getContext('2d');
+                
+                // Calculate the height needed to maintain aspect ratio for 128px width
+                const aspectRatio = this.originalImage.height / this.originalImage.width;
+                const scaledHeight = Math.max(128 * aspectRatio, 32);
+                
+                fullCanvas.width = 128;
+                fullCanvas.height = scaledHeight;
+                
+                // Draw the full image scaled to 128px width
+                fullCtx.drawImage(this.originalImage, 0, 0, 128, scaledHeight);
+                
+                // Create frames for animation
+                const frames = [];
+                const frameCanvas = document.createElement('canvas');
+                const frameCtx = frameCanvas.getContext('2d');
+                frameCanvas.width = 128;
+                frameCanvas.height = 32;
+                
+                // Calculate total scroll distance and number of frames
+                const scrollDistance = scaledHeight - 32;
+                const totalFrames = Math.ceil(scrollDistance / scrollSpeed) + Math.floor(frameRate * 0.5); // Add pause at end
+                
+                for (let i = 0; i < totalFrames; i++) {
+                    frameCtx.clearRect(0, 0, 128, 32);
+                    
+                    // Calculate Y position based on scroll direction
+                    let yPos = Math.min(i * scrollSpeed, scrollDistance);
+                    
+                    if (scrollDirection === 'scroll-top') {
+                        // Scroll from top to bottom
+                        frameCtx.drawImage(fullCanvas, 0, yPos, 128, 32, 0, 0, 128, 32);
+                    } else {
+                        // Scroll from bottom to top (original behavior)
+                        frameCtx.drawImage(fullCanvas, 0, scaledHeight - 32 - yPos, 128, 32, 0, 0, 128, 32);
+                    }
+                    
+                    // Convert frame to data URL and store
+                    frames.push(frameCanvas.toDataURL('image/png'));
+                }
+                
+                // Create animated GIF using a simple approach
+                this.createAnimatedGifFromFrames(frames, frameRate);
+            }
+
+            createAnimatedGifFromFrames(frames, frameRate) {
+                let currentFrame = 0;
+                const resultImg = document.getElementById('resultImage');
+                const animate = () => {
+                    resultImg.src = frames[currentFrame];
+                    currentFrame = (currentFrame + 1) % frames.length;
+                    setTimeout(animate, 1000 / frameRate);
+                };
+                animate();
+                this.resultDataUrl = frames[0];
+                this.resultFrames = frames;
+                this.frameRate = frameRate;
+                const downloadBtn = document.getElementById('downloadBtn');
+                downloadBtn.textContent = 'Download Animated GIF';
+                // Enable the button in case it was disabled
+                downloadBtn.disabled = false;
+                // Remove previous event listeners to avoid stacking
+                downloadBtn.replaceWith(downloadBtn.cloneNode(true));
+                const newDownloadBtn = document.getElementById('downloadBtn');
+                newDownloadBtn.addEventListener('click', this.downloadImage.bind(this));
+                const processing = document.getElementById('processing');
+                const resultPreview = document.getElementById('resultPreview');
+                processing.classList.add('hidden');
+                resultPreview.classList.remove('hidden');
+                this.updateStats();
+            }
+
+            calculateDimensions(originalWidth, originalHeight, mode) {
+                const targetWidth = 128;
+                const targetHeight = 32;
+                
+                let sx = 0, sy = 0, sw = originalWidth, sh = originalHeight;
+                let dx = 0, dy = 0, dw = targetWidth, dh = targetHeight;
+
+                switch (mode) {
+                    case 'cover': {
+                        // Smart crop - fill the entire 128x32 area
+                        var scale = Math.max(targetWidth / originalWidth, targetHeight / originalHeight);
+                        var scaledWidth = originalWidth * scale;
+                        var scaledHeight = originalHeight * scale;
+                        if (scaledWidth > targetWidth) {
+                            var cropWidth = targetWidth / scale;
+                            sx = (originalWidth - cropWidth) / 2;
+                            sw = cropWidth;
+                        }
+                        if (scaledHeight > targetHeight) {
+                            var cropHeight = targetHeight / scale;
+                            sy = (originalHeight - cropHeight) / 2;
+                            sh = cropHeight;
+                        }
+                        break;
+                    }
+                    case 'contain': {
+                        // Fit inside - maintain aspect ratio
+                        var aspectRatio = originalWidth / originalHeight;
+                        var targetAspectRatio = targetWidth / targetHeight;
+                        if (aspectRatio > targetAspectRatio) {
+                            // Image is wider
+                            dh = targetWidth / aspectRatio;
+                            dy = (targetHeight - dh) / 2;
+                        } else {
+                            // Image is taller
+                            dw = targetHeight * aspectRatio;
+                            dx = (targetWidth - dw) / 2;
+                        }
+                        break;
+                    }
+                    case 'stretch':
+                        // Stretch to fit - use default values
+                        break;
+                }
+
+                return { sx, sy, sw, sh, dx, dy, dw, dh };
+            }
+
+            displayResult(dataUrl) {
+                const processing = document.getElementById('processing');
+                const resultPreview = document.getElementById('resultPreview');
+                const resultImg = document.getElementById('resultImage');
+
+                resultImg.src = dataUrl;
+                this.resultDataUrl = dataUrl;
+
+                processing.classList.add('hidden');
+                resultPreview.classList.remove('hidden');
+            }
+
+            updateStats() {
+                const stats = document.getElementById('stats');
+                const originalDimensions = document.getElementById('originalDimensions');
+                const compressionRatio = document.getElementById('compressionRatio');
+                const fileSize = document.getElementById('fileSize');
+
+                const originalPixels = this.originalImage.width * this.originalImage.height;
+                const newPixels = 128 * 32;
+                const ratio = ((1 - newPixels / originalPixels) * 100).toFixed(1);
+
+                originalDimensions.textContent = `Original: ${this.originalImage.width}×${this.originalImage.height} → New: 128×32`;
+                
+                if (this.resultFrames) {
+                    compressionRatio.textContent = `Animation: ${this.resultFrames.length} frames at ${this.frameRate} FPS`;
+                    fileSize.textContent = `Duration: ${(this.resultFrames.length / this.frameRate).toFixed(2)} seconds`;
+                } else {
+                    compressionRatio.textContent = `Size reduction: ${ratio}%`;
+                    fileSize.textContent = `Original file: ${(this.originalFile.size / 1024).toFixed(1)}KB`;
+                }
+
+                stats.classList.remove('hidden');
+            }
+
+            downloadImage() {
+                console.log('downloadImage called');
+                if (!this.resultDataUrl) {
+                    console.warn('No resultDataUrl available, aborting download.');
+                    return;
+                }
+                if (this.resultFrames) {
+                    console.log('Animated GIF download requested.');
+                    this.downloadAnimatedGif();
+                } else {
+                    console.log('Static image download requested.');
+                    const link = document.createElement('a');
+                    link.download = 'image_128x32.jpg';
+                    link.href = this.resultDataUrl;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            }
+
+            downloadAnimatedGif() {
+                console.log('downloadAnimatedGif called');
+                var gif = new window.GIF({
+                    workers: 2,
+                    quality: 10,
+                    width: 128,
+                    height: 32,
+                    workerScript: 'js/gif.worker.js'
+                });
+                var self = this;
+                // Helper to load a single image
+                function loadImage(url, idx) {
+                    return new Promise(function(resolve) {
+                        var img = new window.Image();
+                        img.onload = function() {
+                            resolve(img);
+                        };
+                        img.onerror = function(e) {
+                            console.error('Failed to load frame image', idx, url, e);
+                            resolve(null);
+                        };
+                        img.src = url;
+                    });
+                }
+                // Helper to load all images
+                function loadAllImages(urls) {
+                    var promises = [];
+                    for (var i = 0; i < urls.length; i++) {
+                        promises.push(loadImage(urls[i], i));
+                    }
+                    return Promise.all(promises);
+                }
+                loadAllImages(this.resultFrames).then(function(images) {
+                    console.log('All frame images loaded:', images.length, images);
+                    // Show progress bar
+                    var progressBarContainer = document.getElementById('gifProgressBarContainer');
+                    var progressBar = document.getElementById('gifProgressBar');
+                    var progressText = document.getElementById('gifProgressText');
+                    if (progressBarContainer && progressBar && progressText) {
+                        progressBarContainer.style.display = 'block';
+                        progressBar.style.width = '0%';
+                        progressText.textContent = 'Rendering GIF: 0%';
+                    }
+                    for (var i = 0; i < images.length; i++) {
+                        var img = images[i];
+                        if (!img) {
+                            console.warn('Frame image', i, 'is null or failed to load.');
+                            continue;
+                        }
+                        var tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = 128;
+                        tempCanvas.height = 32;
+                        var tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+                        tempCtx.drawImage(img, 0, 0);
+                        gif.addFrame(tempCtx, {copy: true, delay: 1000 / self.frameRate});
+                        // Log after adding each frame
+                        console.log('Added frame', i, 'to GIF.');
+                    }
+                    gif.on('finished', function(blob) {
+                        if (progressBarContainer) progressBarContainer.style.display = 'none';
+                        console.log('GIF rendering finished, starting download.');
+                        var url = URL.createObjectURL(blob);
+                        var link = document.createElement('a');
+                        link.download = 'animation_128x32.gif';
+                        link.href = url;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                    });
+                    gif.on('progress', function(p) {
+                        var percent = Math.round(p * 100);
+                        if (progressBar && progressText) {
+                            progressBar.style.width = percent + '%';
+                            progressText.textContent = 'Rendering GIF: ' + percent + '%';
+                        }
+                        console.log('GIF render progress event:', percent + '%', 'raw:', p);
+                    });
+                    console.log('Starting GIF render with', gif.frames.length, 'frames.');
+                    gif.render();
+                });
+            }
+        }
+
+        // Initialize the editor when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new GifTo128x32Editor();
+        });
+    </script>
+</body>
+</html>

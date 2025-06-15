@@ -235,3 +235,42 @@ body {
         gap: 8px;
     }
 }
+
+
+/* Add this to your css/style.css file */
+
+.main-nav {
+    background-color: #333; /* Dark background for the navigation */
+    padding: 10px 0;
+    margin-top: 20px; /* Space below the header content */
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.main-nav ul {
+    list-style: none; /* Remove bullet points */
+    padding: 0;
+    margin: 0;
+    display: flex; /* Arrange items in a row */
+    justify-content: space-around; /* Distribute items evenly */
+}
+
+.main-nav li a {
+    color: #fff; /* White text for links */
+    text-decoration: none; /* Remove underline */
+    padding: 10px 15px;
+    display: block; /* Make the whole area clickable */
+    font-weight: bold;
+    transition: background-color 0.3s ease; /* Smooth hover effect */
+}
+
+.main-nav li a:hover,
+.main-nav li a:focus {
+    background-color: #555; /* Darker background on hover/focus */
+    border-radius: 5px;
+}
+
+/* Optional: Add some padding to the main content to prevent it from being hidden by a fixed nav if you later decide to make it fixed */
+.main-content {
+    padding-top: 20px; /* Adjust as needed based on your navigation height */
+}

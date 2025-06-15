@@ -20,11 +20,17 @@
                     <span class="status-value connected">Connected</span>
                 </div>
             </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="index.html">Device Info</a></li>
+                <li><a href="converter.html">Image Converter</a></li>
+                    <li><a href="api.html">API Docs</a></li>
+                </ul>
+            </nav>
         </header>
 
         <main class="main-content">
-            <!-- Device Info Card -->
-            <div class="card info-card">
+            <div class="card info-card" id="device-info">
                 <h2>Device Information</h2>
                 <div class="info-grid">
                     <div class="info-item">
@@ -48,8 +54,7 @@
                 </div>
             </div>
 
-            <!-- Brightness Control Card -->
-            <div class="card control-card">
+            <div class="card control-card" id="brightness-control">
                 <h2>Brightness Control</h2>
                 <div class="brightness-control">
                     <div class="slider-container">
@@ -67,16 +72,15 @@
                         <div class="slider-track"></div>
                     </div>
                     <div class="quick-brightness-buttons">
-                        <button class="btn btn-secondary" onclick="setBrightness(50)">Low</button>
-                        <button class="btn btn-secondary" onclick="setBrightness(128)">Medium</button>
-                        <button class="btn btn-secondary" onclick="setBrightness(200)">High</button>
-                        <button class="btn btn-secondary" onclick="setBrightness(255)">Max</button>
+                        <button class="btn btn-secondary" onclick="setBrightness(10)">Low</button>
+                        <button class="btn btn-secondary" onclick="setBrightness(20)">Medium</button>
+                        <button class="btn btn-secondary" onclick="setBrightness(50)">High</button>
+                        <button class="btn btn-secondary" onclick="setBrightness(100)">Max</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Device Control Card -->
-            <div class="card control-card">
+            <div class="card control-card" id="device-control">
                 <h2>Device Control</h2>
                 <div class="control-buttons">
                     <button class="btn btn-warning" onclick="resetWiFi()">
@@ -89,47 +93,10 @@
                     </button>
                 </div>
             </div>
-
-            <!-- API Documentation Card -->
-            <div class="card api-card">
-                <h2>API Endpoints</h2>
-                <div class="api-list">
-                    <div class="api-item">
-                        <span class="api-method get">GET</span>
-                        <a href="/api/status" class="api-endpoint">/api/status</a>
-                        <span class="api-description">Get device status</span>
-                    </div>
-                    <div class="api-item">
-                        <span class="api-method get">GET</span>
-                        <span class="api-endpoint">/api/brightness/increase</span>
-                        <span class="api-description">Increase brightness by 25</span>
-                    </div>
-                    <div class="api-item">
-                        <span class="api-method get">GET</span>
-                        <span class="api-endpoint">/api/brightness/decrease</span>
-                        <span class="api-description">Decrease brightness by 25</span>
-                    </div>
-                    <div class="api-item">
-                        <span class="api-method get">GET</span>
-                        <span class="api-endpoint">/api/brightness/set?value=X</span>
-                        <span class="api-description">Set brightness (1-255)</span>
-                    </div>
-                    <div class="api-item">
-                        <span class="api-method get">GET</span>
-                        <a href="/api/wifi/reset" class="api-endpoint">/api/wifi/reset</a>
-                        <span class="api-description">Reset WiFi credentials</span>
-                    </div>
-                    <div class="api-item">
-                        <span class="api-method get">GET</span>
-                        <a href="/api/restart" class="api-endpoint">/api/restart</a>
-                        <span class="api-description">Restart device</span>
-                    </div>
-                </div>
-            </div>
         </main>
 
         <footer class="footer">
-            <p>&copy; 2025 Pixel Matrix FX. Powered by ESP32.</p>
+            <p>&copy; 2025 Pixel Matrix FX. Powered by OneStopPinballShop.com</p>
         </footer>
     </div>
 
