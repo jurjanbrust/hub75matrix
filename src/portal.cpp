@@ -20,6 +20,15 @@ String getContentType(String filename) {
     return "text/plain";
 }
 
+// Helper function to add CORS headers to responses
+void addCorsHeaders() {
+    // These headers allow requests from any origin (*)
+    // and permit common HTTP methods and Content-Type header.
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.sendHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    server.sendHeader("Access-Control-Allow-Headers", "Content-Type, X-Requested-With"); // X-Requested-With is common for AJAX
+}
+
 // Function to serve files from LittleFS
 bool handleFileRead(String path) {
     Serial.println("handleFileRead: " + path);
@@ -38,12 +47,13 @@ bool handleFileRead(String path) {
             
             // Replace template variables with actual values
             if (path.endsWith(".html")) {
+                content.replace("%CURRENT_GIF%", current_gif);
                 content.replace("%SSID%", WiFi.SSID());
                 content.replace("%IP%", WiFi.localIP().toString());
-                content.replace("%CURRENT_GIF%", current_gif);
                 content.replace("%BRIGHTNESS%", String(brightness));
             }
             
+            addCorsHeaders(); // Add CORS headers before sending file content
             server.send(200, contentType, content);
             return true;
         }
@@ -92,6 +102,37 @@ void setupWifi() {
 }
 
 void setupWebAPI() {
+
+    // Handle OPTIONS preflight requests for all paths (important for CORS)
+    server.on("/", HTTP_OPTIONS, []() { // Handle OPTIONS for root
+        addCorsHeaders();
+        server.send(204); // Send 204 No Content for preflight
+    });
+    server.on("/api/status", HTTP_OPTIONS, []() { // Handle OPTIONS for status API
+        addCorsHeaders();
+        server.send(204);
+    });
+    server.on("/api/brightness/increase", HTTP_OPTIONS, []() { // Handle OPTIONS for brightness increase
+        addCorsHeaders();
+        server.send(204);
+    });
+    server.on("/api/brightness/decrease", HTTP_OPTIONS, []() { // Handle OPTIONS for brightness decrease
+        addCorsHeaders();
+        server.send(204);
+    });
+    server.on("/api/brightness/set", HTTP_OPTIONS, []() { // Handle OPTIONS for brightness set
+        addCorsHeaders();
+        server.send(204);
+    });
+    server.on("/api/wifi/reset", HTTP_OPTIONS, []() { // Handle OPTIONS for WiFi reset
+        addCorsHeaders();
+        server.send(204);
+    });
+    server.on("/api/restart", HTTP_OPTIONS, []() { // Handle OPTIONS for restart
+        addCorsHeaders();
+        server.send(204);
+    });
+
     // Serve static files from LittleFS
     server.onNotFound([]() {
         if (!handleFileRead(server.uri())) {
@@ -109,6 +150,7 @@ void setupWebAPI() {
 
     // Status endpoint
     server.on("/api/status", HTTP_GET, []() {
+        addCorsHeaders();
         String json = "{";
         json += "\"status\":\"connected\",";
         json += "\"ssid\":\"" + WiFi.SSID() + "\",";
@@ -127,7 +169,7 @@ void setupWebAPI() {
         brightness = min(255, brightness + 25);
         dma_display->setBrightness8(brightness);
         saveBrightnessToPreferences();
-        
+        addCorsHeaders();
         String json = "{";
         json += "\"status\":\"success\",";
         json += "\"message\":\"Brightness increased and saved\",";
@@ -144,7 +186,7 @@ void setupWebAPI() {
         brightness = max(10, brightness - 25);
         dma_display->setBrightness8(brightness);
         saveBrightnessToPreferences();
-        
+        addCorsHeaders();
         String json = "{";
         json += "\"status\":\"success\",";
         json += "\"message\":\"Brightness decreased and saved\",";
@@ -174,7 +216,7 @@ void setupWebAPI() {
         brightness = newBrightness;
         dma_display->setBrightness8(brightness);
         saveBrightnessToPreferences();
-        
+        addCorsHeaders();
         String json = "{";
         json += "\"status\":\"success\",";
         json += "\"message\":\"Brightness set to " + String(brightness) + " and saved\",";
@@ -191,7 +233,7 @@ void setupWebAPI() {
         Serial.println("WiFi reset requested via API");
         
         wm.resetSettings();
-        
+        addCorsHeaders();
         String json = "{";
         json += "\"status\":\"success\",";
         json += "\"message\":\"WiFi credentials cleared. Device will restart in 3 seconds...\"";
@@ -205,7 +247,7 @@ void setupWebAPI() {
     // Device restart endpoint
     server.on("/api/restart", HTTP_GET, []() {
         Serial.println("Device restart requested via API");
-        
+        addCorsHeaders();
         String json = "{\"status\":\"success\",\"message\":\"Device restarting in 3 seconds...\"}";
         server.send(200, "application/json", json);
         

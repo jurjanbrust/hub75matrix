@@ -1,7 +1,21 @@
 // App JavaScript for Pixel Matrix FX Control
 
 class PixelMatrixApp {
-    constructor() {
+
+    baseUrl = '';
+
+    constructor(isRunningOnESP) {
+        // Determine the base URL based on whether it's running on ESP or locally
+        if (!isRunningOnESP) {
+            this.baseUrl = 'http://192.168.10.22';
+        } else {
+            // When running on ESP, paths are relative, so baseUrl can be empty
+            this.baseUrl = '';
+        }
+
+        console.log('Base URL set to:', this.baseUrl);
+
+        // Call init AFTER baseUrl is set
         this.init();
     }
 
@@ -15,7 +29,7 @@ class PixelMatrixApp {
         // Any additional event bindings can go here
         // The HTML already has onclick handlers, but we could move them here
     }
-
+   
     // Update brightness display while sliding
     updateBrightnessDisplay(value) {
         document.getElementById('sliderValue').textContent = value;
@@ -26,7 +40,7 @@ class PixelMatrixApp {
         try {
             this.showLoading('brightnessSlider');
             
-            const response = await fetch(`/api/brightness/set?value=${value}`, {
+            const response = await fetch(this.baseUrl + '/api/brightness/set?value='+ value, {
                 method: 'GET'
             });
             
@@ -60,7 +74,7 @@ class PixelMatrixApp {
         try {
             this.showLoading('resetWiFiBtn');
             
-            const response = await fetch('/api/wifi/reset', {method: 'GET'});
+            const response = await fetch(this.baseUrl + '/api/wifi/reset', {method: 'GET'});
             const data = await response.json();
             
             this.showMessage(data.message, data.status === 'success' ? 'success' : 'error');
@@ -87,7 +101,7 @@ class PixelMatrixApp {
         try {
             this.showLoading('restartBtn');
             
-            const response = await fetch('/api/restart', {method: 'GET'});
+            const response = await fetch(this.baseUrl + '/api/restart', {method: 'GET'});
             const data = await response.json();
             
             this.showMessage(data.message, data.status === 'success' ? 'success' : 'error');
@@ -112,11 +126,21 @@ class PixelMatrixApp {
     // Get device status and update UI
     async updateStatus() {
         try {
-            const response = await fetch('/api/status', {method: 'GET'});
+            const response = await fetch(this.baseUrl + '/api/status', {method: 'GET'});
             const data = await response.json();
             
             if (data.status === 'connected') {
                 // Update dynamic content
+                const ssidElement = document.getElementById('ssid');
+                if (ssidElement && data.ssid) {
+                    ssidElement.textContent = data.ssid;
+                }
+
+                const ipElement = document.getElementById('ip');
+                if (ipElement && data.ip) {
+                    ipElement.textContent = data.ip;
+                }
+
                 const currentGifElement = document.getElementById('current-gif');
                 if (currentGifElement && data.current_gif) {
                     currentGifElement.textContent = data.current_gif;
@@ -137,10 +161,10 @@ class PixelMatrixApp {
 
     // Start periodic status updates
     startStatusUpdates() {
-        // Update status every 30 seconds
+        // Update status every 10 seconds
         setInterval(() => {
             this.updateStatus();
-        }, 30000);
+        }, 10000);
         
         // Initial status update
         this.updateStatus();
@@ -207,5 +231,5 @@ function restartDevice() {
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    window.app = new PixelMatrixApp();
+    window.app = new PixelMatrixApp(true);
 });

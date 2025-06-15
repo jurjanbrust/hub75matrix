@@ -149,8 +149,6 @@ void loop() {
             const char* path = gifFilePaths[i];
             current_gif = String(path);
             
-            Serial.printf("Playing GIF #%lu: %s\n", current_batch_start + i + 1, path);
-            
             // Display progress on matrix
             if(SHOW_PROGRESS) {
                 char progress_msg[32];

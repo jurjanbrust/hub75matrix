@@ -99,8 +99,6 @@ void GIFDraw(GIFDRAW *pDraw)
 
 void * GIFOpenFile(const char *fname, int32_t *pSize)
 {
-    Serial.print("Playing gif: ");
-    Serial.println(fname);
     f = FILESYSTEM.open(fname); // Use the global 'f' with SD filesystem
     if (f)
     {
@@ -155,8 +153,6 @@ void ShowGIF(const char *name) // Changed to const char*
         if (x_offset < 0) x_offset = 0;
         y_offset = (dma_display->height() - gif.getCanvasHeight())/2;
         if (y_offset < 0) y_offset = 0;
-        Serial.printf("Successfully opened GIF; Canvas size = %d x %d\n", gif.getCanvasWidth(), gif.getCanvasHeight());
-        Serial.flush();
         while (gif.playFrame(true, NULL))
         {
             // No timeout, play fully
