@@ -25,6 +25,18 @@ void displayStatus(MatrixPanel_I2S_DMA *dma_display, const char* message, uint16
     dma_display->print(message);
 }
 
+void displayStatus(MatrixPanel_I2S_DMA *dma_display, const char* line1, const char* line2, uint16_t color) {
+    if (dma_display == nullptr) return;
+
+    dma_display->fillScreen(dma_display->color565(0, 0, 0));
+    dma_display->setTextSize(1);
+    dma_display->setTextColor(color);
+    dma_display->setCursor(10, 8);
+    dma_display->print(line1);
+    dma_display->setCursor(10, 18);
+    dma_display->print(line2);
+}
+
 // Utility to clear the paths and free memory
 void clearGifFilePaths() {
     for (char* path : gifFilePaths) {
@@ -56,8 +68,9 @@ bool initSD(MatrixPanel_I2S_DMA *dma_display) {
         Serial.println("SD card initialized successfully!");
     }
 
-    displayStatus(dma_display, "SD OK", dma_display->color565(0, 255, 0));
-    delay(1000);
+    //displayStatus(dma_display, "SD OK", dma_display->color565(0, 255, 0));
+    //delay(1000);
+    
     return true;
 }
 

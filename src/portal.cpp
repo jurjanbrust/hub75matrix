@@ -1,5 +1,6 @@
 #include "portal.h"
 #include "globals.h"
+#include "sdcard.h"
 
 WebServer server(80);
 WiFiManager wm;
@@ -23,25 +24,26 @@ void setupWifi() {
     bool res;
     // res = wm.autoConnect(); // auto generated AP name from chipid
     // res = wm.autoConnect("AutoConnectAP"); // anonymous ap
-    res = wm.autoConnect("AutoConnectAP","password"); // password protected ap
+    res = wm.autoConnect("PixelMatrixFX","password"); // password protected ap
     if(!res) {
         Serial.println("Failed to connect");
-        // ESP.restart();
+        displayStatus(dma_display, "failed to connected...", WiFi.localIP().toString().c_str(), dma_display->color565(255, 0, 0));
+        delay(3000);
     } 
     else {
         //if you get here you have connected to the WiFi    
         Serial.println("connected...");
-        
+        displayStatus(dma_display, "WIFI connected", WiFi.localIP().toString().c_str(), dma_display->color565(0, 255, 0));
+        delay(3000);
         // Start the web API after successful WiFi connection
         setupWebAPI();
     }
 }
-
 void setupWebAPI() {
     // Root endpoint - basic info
     server.on("/", HTTP_GET, []() {
         String html = "<html><head><title>GIF Matrix Display</title></head><body>";
-        html += "<h1>GIF Matrix Display Control</h1>";
+        html += "<h1>Pixel Matrix FX Control</h1>";
         html += "<p>Device Status: Connected to WiFi</p>";
         html += "<p>SSID: " + WiFi.SSID() + "</p>";
         html += "<p>IP Address: " + WiFi.localIP().toString() + "</p>";
