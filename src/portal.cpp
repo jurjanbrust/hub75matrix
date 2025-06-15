@@ -122,32 +122,34 @@ void setupWebAPI() {
         int oldBrightness = brightness;
         brightness = min(255, brightness + 25); // Increase by 25, cap at 255
         dma_display->setBrightness8(brightness);
+        saveBrightnessToPreferences(); // Save the new brightness value
         
         String json = "{";
         json += "\"status\":\"success\",";
-        json += "\"message\":\"Brightness increased\",";
+        json += "\"message\":\"Brightness increased and saved\",";
         json += "\"old_brightness\":" + String(oldBrightness) + ",";
         json += "\"new_brightness\":" + String(brightness);
         json += "}";
         server.send(200, "application/json", json);
         
-        Serial.printf("Brightness increased from %d to %d\n", oldBrightness, brightness);
+        Serial.printf("Brightness increased from %d to %d and saved to preferences\n", oldBrightness, brightness);
     });
 
     server.on("/api/brightness/decrease", HTTP_GET, []() {
         int oldBrightness = brightness;
         brightness = max(10, brightness - 25); // Decrease by 25, minimum at 10
         dma_display->setBrightness8(brightness);
+        saveBrightnessToPreferences(); // Save the new brightness value
         
         String json = "{";
         json += "\"status\":\"success\",";
-        json += "\"message\":\"Brightness decreased\",";
+        json += "\"message\":\"Brightness decreased and saved\",";
         json += "\"old_brightness\":" + String(oldBrightness) + ",";
         json += "\"new_brightness\":" + String(brightness);
         json += "}";
         server.send(200, "application/json", json);
         
-        Serial.printf("Brightness decreased from %d to %d\n", oldBrightness, brightness);
+        Serial.printf("Brightness decreased from %d to %d and saved to preferences\n", oldBrightness, brightness);
     });
 
     server.on("/api/brightness/set", HTTP_GET, []() {
@@ -167,16 +169,17 @@ void setupWebAPI() {
         int oldBrightness = brightness;
         brightness = newBrightness;
         dma_display->setBrightness8(brightness);
+        saveBrightnessToPreferences(); // Save the new brightness value
         
         String json = "{";
         json += "\"status\":\"success\",";
-        json += "\"message\":\"Brightness set to " + String(brightness) + "\",";
+        json += "\"message\":\"Brightness set to " + String(brightness) + " and saved\",";
         json += "\"old_brightness\":" + String(oldBrightness) + ",";
         json += "\"new_brightness\":" + String(brightness);
         json += "}";
         server.send(200, "application/json", json);
         
-        Serial.printf("Brightness set from %d to %d\n", oldBrightness, brightness);
+        Serial.printf("Brightness set from %d to %d and saved to preferences\n", oldBrightness, brightness);
     });
 
     // WiFi reset endpoint
