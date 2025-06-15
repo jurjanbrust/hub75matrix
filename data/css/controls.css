@@ -233,3 +233,32 @@
         min-width: 100%;
     }
 }
+
+.status-value {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px; /* Makes it look like a balloon/pill */
+    color: white; /* Text color inside the balloon */
+    font-weight: bold;
+    min-width: 80px; /* Ensure a consistent size */
+    text-align: center;
+}
+
+.status-value.connected {
+    background-color: #28a745; /* Green for connected */
+}
+
+.status-value.error {
+    background-color: #ffc107; /* Yellow for not connected/error */
+    color: #343a40; /* Darker text for better contrast on yellow */
+}
+
+/* Optional: Add a style for info if you use it for transient messages */
+.status-value.info {
+    background-color: #17a2b8; /* Blue for info */
+}
+
+/* Optional: Add a style for success if different from connected */
+.status-value.success {
+    background-color: #28a745; /* Green, same as connected for general success */
+}

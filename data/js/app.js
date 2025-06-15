@@ -151,11 +151,15 @@ class PixelMatrixApp {
                     brightnessElement.textContent = data.brightness;
                 }
                 
+                // Update the status bar as well
+                this.showMessage('Connected', 'connected', true); // Use 'connected' type for green
                 console.log('Status updated:', data);
+            } else {
+                this.showMessage('Disconnected', 'error', true); // Use 'error' type for yellow
             }
         } catch (error) {
             console.error('Status update failed:', error);
-            // Don't show error messages for status updates to avoid spam
+            this.showMessage('Disconnected', 'error', true); // Show disconnected if status update fails
         }
     }
 
@@ -188,26 +192,23 @@ class PixelMatrixApp {
         }
     }
 
-    // Show message to user
-    showMessage(message, type = 'info') {
-        // Remove existing messages
-        const existingMessages = document.querySelectorAll('.message');
-        existingMessages.forEach(msg => msg.remove());
-        
-        // Create new message
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${type}`;
-        messageDiv.textContent = message;
-        
-        // Insert at the top of main content
-        const mainContent = document.querySelector('.main-content');
-        if (mainContent) {
-            mainContent.insertBefore(messageDiv, mainContent.firstChild);
-            
-            // Auto-remove after 5 seconds
-            setTimeout(() => {
-                messageDiv.remove();
-            }, 5000);
+    // Show message to user using the status bar
+    showMessage(message, type = 'info', isStatusBarUpdate = false) {
+        const statusValueElement = document.querySelector('.status-bar .status-value');
+        if (statusValueElement) {
+            statusValueElement.textContent = message;
+            // Remove previous type classes
+            statusValueElement.classList.remove('connected', 'error', 'success', 'info');
+            // Add the new type class
+            statusValueElement.classList.add(type);
+
+            // If it's a transient message (not a continuous status update), remove it after a delay
+            if (!isStatusBarUpdate) {
+                setTimeout(() => {
+                    // Reset to "Connected" or last known good status after transient message
+                    this.updateStatus(); // Re-fetch current status to display
+                }, 5000); // Message disappears after 5 seconds
+            }
         }
     }
 }
@@ -231,5 +232,5 @@ function restartDevice() {
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    window.app = new PixelMatrixApp(true);
+    window.app = new PixelMatrixApp(false);
 });
