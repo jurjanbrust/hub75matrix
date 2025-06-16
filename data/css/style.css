@@ -269,8 +269,3 @@ body {
     background-color: #555; /* Darker background on hover/focus */
     border-radius: 5px;
 }
-
-/* Optional: Add some padding to the main content to prevent it from being hidden by a fixed nav if you later decide to make it fixed */
-.main-content {
-    padding-top: 20px; /* Adjust as needed based on your navigation height */
-}

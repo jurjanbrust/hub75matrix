@@ -10,20 +10,22 @@
 <body>
     <div class="container">
         <header class="header">
-            <h1 class="title">
-                <span class="pixel-icon">◼</span>
-                Pixel Matrix FX Control
-            </h1>
-            <div class="status-bar">
-                <div class="status-item">
-                    <span class="status-label">Status:</span>
-                    <span class="status-value connected">Connected</span>
+            <div class="header-title-bar" style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 class="title" style="margin: 0;">
+                    <span class="pixel-icon">◼</span>
+                    Pixel Matrix FX Control
+                </h1>
+                <div class="status-bar">
+                    <div class="status-item" style="text-align: right;">
+                        <span class="status-label">Status:</span>
+                        <span class="status-value connected">Connected</span>
+                    </div>
                 </div>
             </div>
             <nav class="main-nav">
                 <ul>
                     <li><a href="index.html">Device Info</a></li>
-                    <li><a href="converter.html">Converter</a></li>
+                    <li><a href="converter.html">Image Converter</a></li>
                     <li><a href="api.html">API Docs</a></li>
                 </ul>
             </nav>
@@ -68,7 +70,7 @@
         </main>
 
         <footer class="footer">
-            <p>&copy; 2025 Pixel Matrix FX. Powered by ESP32.</p>
+            <p>&copy; 2025 Pixel Matrix FX</p>
         </footer>
     </div>
 
