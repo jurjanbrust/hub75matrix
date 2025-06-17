@@ -30,18 +30,24 @@ void addCorsHeaders() {
     server.sendHeader("Access-Control-Allow-Headers", "Content-Type, X-Requested-With"); // X-Requested-With is common for AJAX
 }
 
-// Function to serve files from LittleFS
+// Function to serve files from SD card
 bool handleFileRead(String path) {
     Serial.println("handleFileRead: " + path);
     
     if (path.endsWith("/")) {
         path += "index.html";
     }
-    
+    // Ensure path is absolute
+    if (!path.startsWith("/")) {
+        path = "/" + path;
+    }
     String contentType = getContentType(path);
     
-    if (LittleFS.exists(path)) {
-        File file = LittleFS.open(path, "r");
+    // Prepend /data to the path since that's where our web files are stored
+    String fullPath = "/data" + path;
+    
+    if (sd.exists(fullPath.c_str())) {
+        FsFile file = sd.open(fullPath.c_str(), O_RDONLY);
         if (file) {
             String content = file.readString();
             file.close();
@@ -60,31 +66,19 @@ bool handleFileRead(String path) {
         }
     }
     
-    Serial.println("File Not Found: " + path);
+    Serial.println("File Not Found: " + fullPath);
     return false;
 }
 
+void apModeCallback(WiFiManager *myWiFiManager) {
+    displayStatus(dma_display, "Setup WiFi Connect", "with: PixelMatrixFX", dma_display->color565(255, 255, 0));
+}
+
 void setupWifi() {
-    // Initialize LittleFS
-    if (!LittleFS.begin()) {
-        Serial.println("LittleFS Mount Failed");
-        return;
-    }
-    Serial.println("LittleFS mounted successfully");
-    
-    // List files in LittleFS for debugging
-    File root = LittleFS.open("/");
-    File file = root.openNextFile();
-    Serial.println("Files in LittleFS:");
-    while (file) {
-        Serial.print("  FILE: ");
-        Serial.print(file.name());
-        Serial.print("  SIZE: ");
-        Serial.println(file.size());
-        file = root.openNextFile();
-    }
+    // Remove LittleFS initialization since we're not using it anymore
     
     wm.setClass("invert");
+    wm.setAPCallback(apModeCallback);
 
     // WiFi connection setup
     bool res;
@@ -216,7 +210,7 @@ void setupWebAPI() {
         }
     });
 
-    // Serve static files from LittleFS
+    // Serve static files from SD card
     server.onNotFound([]() {
         Serial.println("404 Not Found: " + server.uri());
         if (!handleFileRead(server.uri())) {
@@ -225,7 +219,7 @@ void setupWebAPI() {
         }
     });
     
-    // Root endpoint - serve index.html from LittleFS
+    // Root endpoint - serve index.html from SD card
     server.on("/", HTTP_GET, []() {
         Serial.println("GET / called");
         if (!handleFileRead("/index.html")) {

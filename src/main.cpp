@@ -3,7 +3,6 @@
 #include "sdcard.h"  // Include our updated SD handler header
 #include "portal.h"  // Include WiFi portal setup header
 #include "settings.h" // Include Preferences for storing settings
-#include "filesystem.h" // Include LittleFS filesystem handler
 #include <AnimatedGIF.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 #include <SPI.h>
@@ -67,18 +66,6 @@ void setup() {
     dma_display->print("Booting...");
 
     Serial.printf("Display initialized with brightness: %d\n", brightness);
-
-    // --- Initialize LittleFS for web files ---
-    if (!initLittleFS()) {
-        Serial.println("LittleFS initialization failed!");
-        dma_display->fillScreen(myBLACK);
-        dma_display->setCursor(0, 0);
-        dma_display->setTextColor(myRED);
-        dma_display->print("LittleFS Error");
-        // Continue anyway, as LittleFS is only for web interface
-    } else {
-        Serial.println("LittleFS initialized successfully");
-    }
 
     // --- Initialize SD card using the existing function ---
     if (!initSD(dma_display)) {

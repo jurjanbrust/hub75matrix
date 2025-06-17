@@ -13,8 +13,7 @@
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 
 #define GIF_DIR "/gifs"
-#define FILESYSTEM sd  // Changed from LittleFS to sd
-#define FORMAT_LITTLEFS_IF_FAILED true
+#define FILESYSTEM sd  // Using SD card for all file operations
 #define SHOW_PROGRESS false // Show progress on the matrix display
 
 #define PANEL_RES_X 64     // Number of pixels wide of each INDIVIDUAL panel module.

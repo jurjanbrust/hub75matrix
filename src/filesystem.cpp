@@ -19,18 +19,19 @@ bool initLittleFS() {
 
 void listFiles(const char* dirname) {
     Serial.printf("Listing directory: %s\n", dirname);
-    
-    File root = LittleFS.open(dirname);
+    String absDir = dirname;
+    if (!absDir.startsWith("/")) {
+        absDir = "/" + absDir;
+    }
+    File root = LittleFS.open(absDir.c_str());
     if (!root) {
         Serial.println("Failed to open directory");
         return;
     }
-    
     if (!root.isDirectory()) {
         Serial.println("Not a directory");
         return;
     }
-    
     File file = root.openNextFile();
     while (file) {
         if (file.isDirectory()) {
