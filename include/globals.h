@@ -1,6 +1,14 @@
 #ifndef _GLOBAL_
 #define _GLOBAL_
 
+#ifdef FILE_READ
+#undef FILE_READ
+#endif
+#ifdef FILE_WRITE
+#undef FILE_WRITE
+#endif
+
+#include <FS.h>
 #include <SdFat.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 

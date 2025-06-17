@@ -1,6 +1,7 @@
+#include <FS.h>
+#include <SdFat.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 #include <AnimatedGIF.h>
-#include <SdFat.h>
 #include "Globals.h"
 
 int x_offset, y_offset;

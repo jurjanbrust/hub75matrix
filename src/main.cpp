@@ -1,3 +1,9 @@
+#ifdef FILE_READ
+#undef FILE_READ
+#endif
+#ifdef FILE_WRITE
+#undef FILE_WRITE
+#endif
 #include "FS.h"
 #include "globals.h" // Expected to define frame_status_t, STARTUP, SD_CARD_ERROR, NO_FILES, PLAYING_ART, PANEL_RES_X, PANEL_RES_Y, PANEL_CHAIN
 #include "gif.h"     // Expected to define InitMatrixGif(), ShowGIF()
