@@ -105,36 +105,101 @@ void setupWebAPI() {
 
     // Handle OPTIONS preflight requests for all paths (important for CORS)
     server.on("/", HTTP_OPTIONS, []() { // Handle OPTIONS for root
+        Serial.println("OPTIONS / called");
         addCorsHeaders();
         server.send(204); // Send 204 No Content for preflight
     });
     server.on("/api/status", HTTP_OPTIONS, []() { // Handle OPTIONS for status API
+        Serial.println("OPTIONS /api/status called");
         addCorsHeaders();
         server.send(204);
     });
     server.on("/api/brightness/increase", HTTP_OPTIONS, []() { // Handle OPTIONS for brightness increase
+        Serial.println("OPTIONS /api/brightness/increase called");
         addCorsHeaders();
         server.send(204);
     });
     server.on("/api/brightness/decrease", HTTP_OPTIONS, []() { // Handle OPTIONS for brightness decrease
+        Serial.println("OPTIONS /api/brightness/decrease called");
         addCorsHeaders();
         server.send(204);
     });
     server.on("/api/brightness/set", HTTP_OPTIONS, []() { // Handle OPTIONS for brightness set
+        Serial.println("OPTIONS /api/brightness/set called");
         addCorsHeaders();
         server.send(204);
     });
     server.on("/api/wifi/reset", HTTP_OPTIONS, []() { // Handle OPTIONS for WiFi reset
+        Serial.println("OPTIONS /api/wifi/reset called");
         addCorsHeaders();
         server.send(204);
     });
     server.on("/api/restart", HTTP_OPTIONS, []() { // Handle OPTIONS for restart
+        Serial.println("OPTIONS /api/restart called");
         addCorsHeaders();
         server.send(204);
     });
 
+    // GIF upload endpoint
+    server.on("/api/gif/upload", HTTP_OPTIONS, []() {
+        Serial.println("OPTIONS /api/gif/upload called");
+        addCorsHeaders();
+        server.send(204);
+    });
+    server.on("/api/gif/upload", HTTP_POST, []() {
+        Serial.println("POST /api/gif/upload called");
+        // This will be called after upload is complete
+        addCorsHeaders();
+        if (server.hasArg("filename")) {
+            String filename = server.arg("filename");
+            if (!filename.endsWith(".gif")) {
+                server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Only .gif files are allowed\"}");
+                return;
+            }
+            server.send(200, "application/json", "{\"status\":\"success\",\"message\":\"Upload complete\"}");
+        } else {
+            server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Missing filename\"}");
+        }
+    },
+    // Upload handler
+    []() {
+        HTTPUpload& upload = server.upload();
+        static FsFile uploadFile;
+        static String uploadFilename;
+        if (upload.status == UPLOAD_FILE_START) {
+            Serial.println("UPLOAD /api/gif/upload started");
+            uploadFilename = upload.filename;
+            if (!uploadFilename.endsWith(".gif")) {
+                Serial.println("Rejected non-GIF upload: " + uploadFilename);
+                return;
+            }
+            String path = String("/gifs/") + uploadFilename;
+            // Remove if already exists
+            if (sd.exists(path.c_str())) {
+                sd.remove(path.c_str());
+            }
+            uploadFile = sd.open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC);
+            Serial.println("Upload start: " + path);
+        } else if (upload.status == UPLOAD_FILE_WRITE) {
+            if (uploadFile) {
+                uploadFile.write(upload.buf, upload.currentSize);
+            }
+        } else if (upload.status == UPLOAD_FILE_END) {
+            if (uploadFile) {
+                uploadFile.close();
+                Serial.println("Upload complete: " + uploadFilename);
+            }
+        } else if (upload.status == UPLOAD_FILE_ABORTED) {
+            if (uploadFile) {
+                uploadFile.close();
+                Serial.println("Upload aborted: " + uploadFilename);
+            }
+        }
+    });
+
     // Serve static files from LittleFS
     server.onNotFound([]() {
+        Serial.println("404 Not Found: " + server.uri());
         if (!handleFileRead(server.uri())) {
             String json = "{\"status\":\"error\",\"message\":\"File not found\"}";
             server.send(404, "application/json", json);
@@ -143,6 +208,7 @@ void setupWebAPI() {
     
     // Root endpoint - serve index.html from LittleFS
     server.on("/", HTTP_GET, []() {
+        Serial.println("GET / called");
         if (!handleFileRead("/index.html")) {
             server.send(500, "text/plain", "Failed to load index.html");
         }
@@ -150,6 +216,7 @@ void setupWebAPI() {
 
     // Status endpoint
     server.on("/api/status", HTTP_GET, []() {
+        Serial.println("GET /api/status called");
         addCorsHeaders();
         String json = "{";
         json += "\"status\":\"connected\",";
@@ -165,6 +232,7 @@ void setupWebAPI() {
 
     // Brightness control endpoints
     server.on("/api/brightness/increase", HTTP_GET, []() {
+        Serial.println("GET /api/brightness/increase called");
         int oldBrightness = brightness;
         brightness = min(255, brightness + 25);
         dma_display->setBrightness8(brightness);
@@ -182,6 +250,7 @@ void setupWebAPI() {
     });
 
     server.on("/api/brightness/decrease", HTTP_GET, []() {
+        Serial.println("GET /api/brightness/decrease called");
         int oldBrightness = brightness;
         brightness = max(10, brightness - 25);
         dma_display->setBrightness8(brightness);
@@ -199,6 +268,7 @@ void setupWebAPI() {
     });
 
     server.on("/api/brightness/set", HTTP_GET, []() {
+        Serial.println("GET /api/brightness/set called");
         if (!server.hasArg("value")) {
             String json = "{\"status\":\"error\",\"message\":\"Missing 'value' parameter\"}";
             server.send(400, "application/json", json);
@@ -230,6 +300,7 @@ void setupWebAPI() {
 
     // WiFi reset endpoint
     server.on("/api/wifi/reset", HTTP_GET, []() {
+        Serial.println("GET /api/wifi/reset called");
         Serial.println("WiFi reset requested via API");
         
         wm.resetSettings();
@@ -246,6 +317,7 @@ void setupWebAPI() {
 
     // Device restart endpoint
     server.on("/api/restart", HTTP_GET, []() {
+        Serial.println("GET /api/restart called");
         Serial.println("Device restart requested via API");
         addCorsHeaders();
         String json = "{\"status\":\"success\",\"message\":\"Device restarting in 3 seconds...\"}";
@@ -265,6 +337,7 @@ void setupWebAPI() {
     Serial.println("  GET /api/brightness/set?value=X - Set brightness");
     Serial.println("  GET /api/wifi/reset - Reset WiFi credentials");
     Serial.println("  GET /api/restart - Restart device");
+    Serial.println("  POST /api/gif/upload - Upload GIF");
     Serial.print("Access at: http://");
     Serial.println(WiFi.localIP());
 }

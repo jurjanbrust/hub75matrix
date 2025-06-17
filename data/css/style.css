@@ -181,6 +181,12 @@ body {
     color: white;
 }
 
+.api-method.post {
+    background: orange;
+    color: white;
+}
+
+
 .api-endpoint {
     font-family: 'Courier New', monospace;
     font-weight: 500;
