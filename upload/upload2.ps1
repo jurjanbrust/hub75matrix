@@ -1,8 +1,8 @@
 # PowerShell script to test /api/gif/upload endpoint
 
 $endpoint = "http://192.168.10.22/api/gif/upload"
-$filePath = "C:\Path\To\Your\test.gif"
-$fileName = "test.gif"
+$filePath = "C:\Dev\IoT\Hub75_matrix\myhub75matrix\upload\windows.gif"
+$fileName = "windows.gif"
 
 # Create multipart form data content
 $boundary = "----WebKitFormBoundary" + [System.Guid]::NewGuid().ToString("N")
