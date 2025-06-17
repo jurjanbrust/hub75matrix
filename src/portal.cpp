@@ -148,7 +148,6 @@ void setupWebAPI() {
     });
     server.on("/api/gif/upload", HTTP_POST, []() {
         Serial.println("POST /api/gif/upload called");
-        // This will be called after upload is complete
         addCorsHeaders();
         if (server.hasArg("filename")) {
             String filename = server.arg("filename");
@@ -156,7 +155,10 @@ void setupWebAPI() {
                 server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Only .gif files are allowed\"}");
                 return;
             }
-            server.send(200, "application/json", "{\"status\":\"success\",\"message\":\"Upload complete\"}");
+            // Success response is now sent only if no error occurred during upload
+            if (!server.arg("upload_error").equals("1")) {
+                server.send(200, "application/json", "{\"status\":\"success\",\"message\":\"Upload complete\"}");
+            }
         } else {
             server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Missing filename\"}");
         }
@@ -166,26 +168,42 @@ void setupWebAPI() {
         HTTPUpload& upload = server.upload();
         static FsFile uploadFile;
         static String uploadFilename;
+        static bool uploadError = false;
         if (upload.status == UPLOAD_FILE_START) {
+            uploadError = false;
             Serial.println("UPLOAD /api/gif/upload started");
             uploadFilename = upload.filename;
             if (!uploadFilename.endsWith(".gif")) {
                 Serial.println("Rejected non-GIF upload: " + uploadFilename);
+                uploadError = true;
                 return;
             }
             String path = String("/gifs/") + uploadFilename;
-            // Remove if already exists
             if (sd.exists(path.c_str())) {
                 sd.remove(path.c_str());
             }
             uploadFile = sd.open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC);
+            if (!uploadFile) {
+                Serial.println("SD card error or full: " + path);
+                addCorsHeaders();
+                server.send(507, "application/json", "{\"status\":\"error\",\"message\":\"SD card error or full\"}");
+                uploadError = true;
+                return;
+            }
             Serial.println("Upload start: " + path);
         } else if (upload.status == UPLOAD_FILE_WRITE) {
-            if (uploadFile) {
-                uploadFile.write(upload.buf, upload.currentSize);
+            if (uploadFile && !uploadError) {
+                int written = uploadFile.write(upload.buf, upload.currentSize);
+                if (written != upload.currentSize) {
+                    Serial.println("Write error during upload: " + uploadFilename);
+                    uploadFile.close();
+                    addCorsHeaders();
+                    server.send(507, "application/json", "{\"status\":\"error\",\"message\":\"Write error during upload\"}");
+                    uploadError = true;
+                }
             }
         } else if (upload.status == UPLOAD_FILE_END) {
-            if (uploadFile) {
+            if (uploadFile && !uploadError) {
                 uploadFile.close();
                 Serial.println("Upload complete: " + uploadFilename);
             }
