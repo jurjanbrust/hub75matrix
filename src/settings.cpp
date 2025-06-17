@@ -1,3 +1,4 @@
+#include "FS.h"
 #include "settings.h"
 #include "globals.h"
 

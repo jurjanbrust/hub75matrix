@@ -1,3 +1,4 @@
+#include "FS.h"
 #include "portal.h"
 #include "globals.h"
 #include "sdcard.h"
