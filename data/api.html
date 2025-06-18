@@ -33,7 +33,7 @@
 
         <main class="main-content">
             <div class="card api-card" id="api-endpoints">
-                <h2>API Endpoints</h2>
+                <h2>Device Management APIs</h2>
                 <div class="api-list">
                     <div class="api-item">
                         <span class="api-method get">GET</span>
@@ -69,6 +69,44 @@
                         <span class="api-method post">POST</span>
                         <span class="api-endpoint">/api/gif/upload</span>
                         <span class="api-description">Upload a GIF file to the /gifs folder</span>
+                    </div>
+                </div>
+                <h2 style="margin-top:2em;">File Management APIs</h2>
+                <div class="api-list">
+                    <div class="api-item">
+                        <span class="api-method get">GET</span>
+                        <span class="api-endpoint">/api/files?path=/folder/</span>
+                        <span class="api-description">List files and folders in a directory (default: root)</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-endpoint">/api/files/delete</span>
+                        <span class="api-description">Delete a file or folder. <br>Body: <code>{ "path": "/path/to/file" }</code></span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-endpoint">/api/files/rename</span>
+                        <span class="api-description">Rename a file or folder. <br>Body: <code>{ "path": "/path/to/file", "newName": "newname" }</code></span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-endpoint">/api/files/move</span>
+                        <span class="api-description">Move a file or folder. <br>Body: <code>{ "path": "/old/path/file", "newPath": "/new/path/file" }</code></span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-endpoint">/api/files/create-folder</span>
+                        <span class="api-description">Create a new folder. <br>Body: <code>{ "name": "foldername" }</code></span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-endpoint">/api/dirs/rename</span>
+                        <span class="api-description">Rename a directory. <br>Body: <code>{ "path": "/old/folder", "newName": "newfolder" }</code></span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method post">POST</span>
+                        <span class="api-endpoint">/api/dirs/delete</span>
+                        <span class="api-description">Delete a directory (recursive). <br>Body: <code>{ "path": "/folder/to/delete" }</code></span>
                     </div>
                 </div>
             </div>

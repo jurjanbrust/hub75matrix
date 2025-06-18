@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Management</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/controls.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-title-bar" style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 class="title" style="margin: 0;">
+                    <span class="pixel-icon">◼</span>
+                    Pixel Matrix FX Control
+                </h1>
+                <div class="status-bar">
+                    <div class="status-item" style="text-align: right;">
+                        <span class="status-label">Status:</span>
+                        <span class="status-value connected">Connected</span>
+                    </div>
+                </div>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="index.html">Device Info</a></li>
+                    <li><a href="converter.html">Image Converter</a></li>
+                    <li><a href="api.html">API Docs</a></li>
+                    <li><a href="filemgmt.html">File Management</a></li>
+                </ul>
+            </nav>
+        </header>
+        <main class="main-content">
+            <div class="card info-card">
+                <h2>File Management</h2>
+                <div style="margin-bottom: 1em;">
+                    <button onclick="createFolder()">Create Folder</button>
+                    <input type="text" id="newFolderName" placeholder="Folder name">
+                </div>
+                <table class="file-list" id="fileTable">
+                    <thead>
+                        <tr><th>Name</th><th>Type</th><th>Size</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody id="fileTableBody">
+                        <!-- Files will be listed here -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+    <script>
+        async function fetchFiles(path = '/') {
+            const response = await fetch(`/api/files?path=${encodeURIComponent(path)}`);
+            const files = await response.json();
+            renderFiles(files, path);
+        }
+
+        function renderFiles(files, path) {
+            const tbody = document.getElementById('fileTableBody');
+            tbody.innerHTML = '';
+            files.forEach(file => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="${file.type === 'folder' ? 'folder' : ''}">${file.name}</td>
+                    <td>${file.type}</td>
+                    <td>${file.size || ''}</td>
+                    <td class="file-actions">
+                        ${file.type === 'folder' ? `<button onclick="fetchFiles('${path}${file.name}/')">Open</button>` : ''}
+                        <button onclick="renameFile('${path}${file.name}')">Rename</button>
+                        <button onclick="deleteFile('${path}${file.name}')">Delete</button>
+                        ${file.type === 'file' ? `<button onclick="moveFilePrompt('${path}${file.name}')">Move</button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function createFolder() {
+            const name = document.getElementById('newFolderName').value;
+            if (!name) return alert('Enter folder name');
+            fetch('/api/files/create-folder', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name })
+            }).then(() => fetchFiles());
+        }
+
+        function renameFile(path) {
+            const newName = prompt('Enter new name:');
+            if (!newName) return;
+            fetch('/api/files/rename', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ path, newName })
+            }).then(() => fetchFiles());
+        }
+
+        function deleteFile(path) {
+            if (!confirm('Delete this file/folder?')) return;
+            fetch('/api/files/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ path })
+            }).then(() => fetchFiles());
+        }
+
+        function moveFilePrompt(path) {
+            const newPath = prompt('Enter new path (including filename):');
+            if (!newPath) return;
+            fetch('/api/files/move', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ path, newPath })
+            }).then(() => fetchFiles());
+        }
+
+        // Initial load
+        fetchFiles();
+    </script>
+</body>
+</html>

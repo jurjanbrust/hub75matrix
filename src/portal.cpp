@@ -340,6 +340,194 @@ void setupWebAPI() {
         ESP.restart();
     });
 
+    // List files in a directory
+    server.on("/api/files", HTTP_GET, []() {
+        addCorsHeaders();
+        String path = "/";
+        if (server.hasArg("path")) path = server.arg("path");
+        if (!path.startsWith("/")) path = "/" + path;
+        FsFile dir = sd.open(path.c_str(), O_RDONLY);
+        if (!dir || !dir.isDir()) {
+            server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Directory not found\"}");
+            return;
+        }
+        String json = "[";
+        FsFile entry;
+        bool first = true;
+        while ((entry = dir.openNextFile())) {
+            if (!first) json += ",";
+            first = false;
+            json += "{\"name\":\"" + String(entry.name()) + "\",";
+            json += "\"type\":\"" + String(entry.isDir() ? "folder" : "file") + "\",";
+            if (!entry.isDir()) json += "\"size\":" + String(entry.size()) + ",";
+            if (json.endsWith(",")) json.remove(json.length() - 1); // Remove trailing comma
+            json += "}";
+            entry.close();
+        }
+        json += "]";
+        dir.close();
+        server.send(200, "application/json", json);
+    });
+
+    // Delete file or folder
+    server.on("/api/files/delete", HTTP_POST, []() {
+        addCorsHeaders();
+        if (!server.hasArg("plain")) {
+            server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Missing body\"}");
+            return;
+        }
+        String body = server.arg("plain");
+        DynamicJsonDocument doc(256);
+        DeserializationError err = deserializeJson(doc, body);
+        if (err) {
+            server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Invalid JSON\"}");
+            return;
+        }
+        String path = doc["path"] | "";
+        if (!path.startsWith("/")) path = "/" + path;
+        if (!sd.exists(path.c_str())) {
+            server.send(404, "application/json", "{\"status\":\"error\",\"message\":\"File/folder not found\"}");
+            return;
+        }
+        bool ok = sd.remove(path.c_str());
+        if (ok) server.send(200, "application/json", "{\"status\":\"success\",\"message\":\"Deleted\"}");
+        else server.send(500, "application/json", "{\"status\":\"error\",\"message\":\"Delete failed\"}");
+    });
+
+    // Rename file or folder
+    server.on("/api/files/rename", HTTP_POST, []() {
+        addCorsHeaders();
+        if (!server.hasArg("plain")) {
+            server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Missing body\"}");
+            return;
+        }
+        String body = server.arg("plain");
+        DynamicJsonDocument doc(256);
+        DeserializationError err = deserializeJson(doc, body);
+        if (err) {
+            server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Invalid JSON\"}");
+            return;
+        }
+        String path = doc["path"] | "";
+        String newName = doc["newName"] | "";
+        if (!path.startsWith("/")) path = "/" + path;
+        int lastSlash = path.lastIndexOf('/');
+        String newPath = path.substring(0, lastSlash + 1) + newName;
+        if (!sd.exists(path.c_str())) {
+            server.send(404, "application/json", "{\"status\":\"error\",\"message\":\"File/folder not found\"}");
+            return;
+        }
+        bool ok = sd.rename(path.c_str(), newPath.c_str());
+        if (ok) server.send(200, "application/json", "{\"status\":\"success\",\"message\":\"Renamed\"}");
+        else server.send(500, "application/json", "{\"status\":\"error\",\"message\":\"Rename failed\"}");
+    });
+
+    // Move file or folder
+    server.on("/api/files/move", HTTP_POST, []() {
+        addCorsHeaders();
+        if (!server.hasArg("plain")) {
+            server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Missing body\"}");
+            return;
+        }
+        String body = server.arg("plain");
+        DynamicJsonDocument doc(256);
+        DeserializationError err = deserializeJson(doc, body);
+        if (err) {
+            server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Invalid JSON\"}");
+            return;
+        }
+        String path = doc["path"] | "";
+        String newPath = doc["newPath"] | "";
+        if (!path.startsWith("/")) path = "/" + path;
+        if (!newPath.startsWith("/")) newPath = "/" + newPath;
+        if (!sd.exists(path.c_str())) {
+            server.send(404, "application/json", "{\"status\":\"error\",\"message\":\"File/folder not found\"}");
+            return;
+        }
+        bool ok = sd.rename(path.c_str(), newPath.c_str());
+        if (ok) server.send(200, "application/json", "{\"status\":\"success\",\"message\":\"Moved\"}");
+        else server.send(500, "application/json", "{\"status\":\"error\",\"message\":\"Move failed\"}");
+    });
+
+    // Create folder
+    server.on("/api/files/create-folder", HTTP_POST, []() {
+        addCorsHeaders();
+        if (!server.hasArg("plain")) {
+            server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Missing body\"}");
+            return;
+        }
+        String body = server.arg("plain");
+        DynamicJsonDocument doc(256);
+        DeserializationError err = deserializeJson(doc, body);
+        if (err) {
+            server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Invalid JSON\"}");
+            return;
+        }
+        String name = doc["name"] | "";
+        String path = "/" + name;
+        if (sd.exists(path.c_str())) {
+            server.send(409, "application/json", "{\"status\":\"error\",\"message\":\"Folder already exists\"}");
+            return;
+        }
+        bool ok = sd.mkdir(path.c_str());
+        if (ok) server.send(200, "application/json", "{\"status\":\"success\",\"message\":\"Folder created\"}");
+        else server.send(500, "application/json", "{\"status\":\"error\",\"message\":\"Create folder failed\"}");
+    });
+
+    // Rename directory
+    server.on("/api/dirs/rename", HTTP_POST, []() {
+        addCorsHeaders();
+        if (!server.hasArg("plain")) {
+            server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Missing body\"}");
+            return;
+        }
+        String body = server.arg("plain");
+        DynamicJsonDocument doc(256);
+        DeserializationError err = deserializeJson(doc, body);
+        if (err) {
+            server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Invalid JSON\"}");
+            return;
+        }
+        String path = doc["path"] | "";
+        String newName = doc["newName"] | "";
+        if (!path.startsWith("/")) path = "/" + path;
+        int lastSlash = path.lastIndexOf('/');
+        String newPath = path.substring(0, lastSlash + 1) + newName;
+        if (!sd.exists(path.c_str())) {
+            server.send(404, "application/json", "{\"status\":\"error\",\"message\":\"Directory not found\"}");
+            return;
+        }
+        bool ok = sd.rename(path.c_str(), newPath.c_str());
+        if (ok) server.send(200, "application/json", "{\"status\":\"success\",\"message\":\"Directory renamed\"}");
+        else server.send(500, "application/json", "{\"status\":\"error\",\"message\":\"Rename failed\"}");
+    });
+
+    // Delete directory (recursive)
+    server.on("/api/dirs/delete", HTTP_POST, []() {
+        addCorsHeaders();
+        if (!server.hasArg("plain")) {
+            server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Missing body\"}");
+            return;
+        }
+        String body = server.arg("plain");
+        DynamicJsonDocument doc(256);
+        DeserializationError err = deserializeJson(doc, body);
+        if (err) {
+            server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Invalid JSON\"}");
+            return;
+        }
+        String path = doc["path"] | "";
+        if (!path.startsWith("/")) path = "/" + path;
+        if (!sd.exists(path.c_str())) {
+            server.send(404, "application/json", "{\"status\":\"error\",\"message\":\"Directory not found\"}");
+            return;
+        }
+        // Recursively delete directory
+        bool ok = sd.rmdir(path.c_str());
+        if (ok) server.send(200, "application/json", "{\"status\":\"success\",\"message\":\"Directory deleted\"}");
+        else server.send(500, "application/json", "{\"status\":\"error\",\"message\":\"Delete failed\"}");
+    });
+
     server.begin();
     Serial.println("Web API server started on port 80");
     Serial.println("Available endpoints:");
@@ -351,6 +539,13 @@ void setupWebAPI() {
     Serial.println("  GET /api/wifi/reset - Reset WiFi credentials");
     Serial.println("  GET /api/restart - Restart device");
     Serial.println("  POST /api/gif/upload - Upload GIF");
+    Serial.println("  GET /api/files - List files in directory");
+    Serial.println("  POST /api/files/delete - Delete file or folder");
+    Serial.println("  POST /api/files/rename - Rename file or folder");
+    Serial.println("  POST /api/files/move - Move file or folder");
+    Serial.println("  POST /api/files/create-folder - Create new folder");
+    Serial.println("  POST /api/dirs/rename - Rename directory");
+    Serial.println("  POST /api/dirs/delete - Delete directory");
     Serial.print("Access at: http://");
     Serial.println(WiFi.localIP());
 }
