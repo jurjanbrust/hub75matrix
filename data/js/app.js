@@ -7,7 +7,7 @@ class PixelMatrixApp {
     constructor(isRunningOnESP) {
         // Determine the base URL based on whether it's running on ESP or locally
         if (!isRunningOnESP) {
-            this.baseUrl = 'http://192.168.10.22';
+            this.baseUrl = 'http://localhost:8080';
         } else {
             // When running on ESP, paths are relative, so baseUrl can be empty
             this.baseUrl = '';
