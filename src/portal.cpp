@@ -4,6 +4,7 @@
 #include "sdcard.h"
 #include "settings.h"
 #include "LittleFS.h"
+#include <ArduinoJson.h>
 
 WebServer server(80);
 WiFiManager wm;
@@ -210,6 +211,95 @@ void setupWebAPI() {
         }
     });
 
+    // General file upload endpoint
+    server.on("/api/file/upload", HTTP_OPTIONS, []() {
+        Serial.println("OPTIONS /api/file/upload called");
+        addCorsHeaders();
+        server.send(204);
+    });
+    server.on("/api/file/upload", HTTP_POST, []() {
+        Serial.println("POST /api/file/upload called");
+        addCorsHeaders();
+        if (server.hasArg("filename") && server.hasArg("path")) {
+            String filename = server.arg("filename");
+            String targetPath = server.arg("path");
+            
+            // Success response is now sent only if no error occurred during upload
+            if (!server.arg("upload_error").equals("1")) {
+                server.send(200, "application/json", "{\"status\":\"success\",\"message\":\"Upload complete\"}");
+            }
+        } else {
+            server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Missing filename or path\"}");
+        }
+    },
+    // Upload handler for general files
+    []() {
+        HTTPUpload& upload = server.upload();
+        static FsFile uploadFile;
+        static String uploadFilename;
+        static String uploadPath;
+        static bool uploadError = false;
+        
+        if (upload.status == UPLOAD_FILE_START) {
+            uploadError = false;
+            Serial.println("UPLOAD /api/file/upload started");
+            uploadFilename = upload.filename;
+            uploadPath = server.arg("path");
+            
+            // Ensure the target directory exists
+            String dirPath = uploadPath;
+            int lastSlash = dirPath.lastIndexOf('/');
+            if (lastSlash > 0) {
+                String parentDir = dirPath.substring(0, lastSlash);
+                if (!sd.exists(parentDir.c_str())) {
+                    if (!sd.mkdir(parentDir.c_str())) {
+                        Serial.println("Failed to create directory: " + parentDir);
+                        addCorsHeaders();
+                        server.send(507, "application/json", "{\"status\":\"error\",\"message\":\"Failed to create directory\"}");
+                        uploadError = true;
+                        return;
+                    }
+                }
+            }
+            
+            // Remove existing file if it exists
+            if (sd.exists(uploadPath.c_str())) {
+                sd.remove(uploadPath.c_str());
+            }
+            
+            uploadFile = sd.open(uploadPath.c_str(), O_WRONLY | O_CREAT | O_TRUNC);
+            if (!uploadFile) {
+                Serial.println("SD card error or full: " + uploadPath);
+                addCorsHeaders();
+                server.send(507, "application/json", "{\"status\":\"error\",\"message\":\"SD card error or full\"}");
+                uploadError = true;
+                return;
+            }
+            Serial.println("Upload start: " + uploadPath);
+        } else if (upload.status == UPLOAD_FILE_WRITE) {
+            if (uploadFile && !uploadError) {
+                int written = uploadFile.write(upload.buf, upload.currentSize);
+                if (written != upload.currentSize) {
+                    Serial.println("Write error during upload: " + uploadFilename);
+                    uploadFile.close();
+                    addCorsHeaders();
+                    server.send(507, "application/json", "{\"status\":\"error\",\"message\":\"Write error during upload\"}");
+                    uploadError = true;
+                }
+            }
+        } else if (upload.status == UPLOAD_FILE_END) {
+            if (uploadFile && !uploadError) {
+                uploadFile.close();
+                Serial.println("Upload complete: " + uploadPath);
+            }
+        } else if (upload.status == UPLOAD_FILE_ABORTED) {
+            if (uploadFile) {
+                uploadFile.close();
+                Serial.println("Upload aborted: " + uploadPath);
+            }
+        }
+    });
+
     // Serve static files from SD card
     server.onNotFound([]() {
         Serial.println("404 Not Found: " + server.uri());
@@ -357,7 +447,10 @@ void setupWebAPI() {
         while ((entry = dir.openNextFile())) {
             if (!first) json += ",";
             first = false;
-            json += "{\"name\":\"" + String(entry.name()) + "\",";
+            
+            char name[256];
+            entry.getName(name, sizeof(name));
+            json += "{\"name\":\"" + String(name) + "\",";
             json += "\"type\":\"" + String(entry.isDir() ? "folder" : "file") + "\",";
             if (!entry.isDir()) json += "\"size\":" + String(entry.size()) + ",";
             if (json.endsWith(",")) json.remove(json.length() - 1); // Remove trailing comma
@@ -539,6 +632,7 @@ void setupWebAPI() {
     Serial.println("  GET /api/wifi/reset - Reset WiFi credentials");
     Serial.println("  GET /api/restart - Restart device");
     Serial.println("  POST /api/gif/upload - Upload GIF");
+    Serial.println("  POST /api/file/upload - Upload any file with path");
     Serial.println("  GET /api/files - List files in directory");
     Serial.println("  POST /api/files/delete - Delete file or folder");
     Serial.println("  POST /api/files/rename - Rename file or folder");
