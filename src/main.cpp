@@ -99,18 +99,18 @@ void setup() {
 }
 
 void loop() {
-    // Handle web API requests
+    // Handle web API requests more frequently
     handleWebAPIRequests();
     
     if (total_gifs_count == 0) {
         Serial.println("No GIFs found. Looping...");
-        delay(5000);
+        delay(1000); // Reduced from 5000ms
         return;
     }
 
     // Main batch processing loop
     while (true) {
-        // Handle web API requests during GIF processing
+        // Handle web API requests more frequently during GIF processing
         handleWebAPIRequests();
         
         // Check if we need to start over from the beginning
@@ -118,14 +118,14 @@ void loop() {
             Serial.println("Completed all GIFs! Starting over from the beginning...");
             current_batch_start = 0;
             batch_processing_complete = false;
-            delay(2000); // Pause before restarting the entire cycle
+            delay(1000); // Reduced from 2000ms
         }
 
         // Load the next batch of GIFs
         Serial.printf("Loading batch starting from GIF #%lu (Batch size: %d)\n", current_batch_start + 1, BATCH_SIZE);
         if (!loadNextGifBatch(dma_display)) {
             Serial.println("Failed to load GIF batch! Retrying...");
-            delay(2000);
+            delay(1000); // Reduced from 2000ms
             continue; // Retry loading the same batch
         }
 
@@ -140,11 +140,11 @@ void loop() {
                 char progress_msg[32];
                 sprintf(progress_msg, "GIF %lu/%lu", current_batch_start + i + 1, total_gifs_count);
                 displayStatus(dma_display, progress_msg, dma_display->color565(0, 255, 255));
-                delay(500); // Brief pause to show progress
+                delay(200); // Reduced from 500ms
             }
             
             ShowGIF(path); // Play GIF using the stored path
-            delay(100); // Small delay between GIFs
+            delay(50); // Reduced from 100ms
             
             yield(); // Allow other tasks to run
             handleWebAPIRequests(); // Handle API requests between GIFs

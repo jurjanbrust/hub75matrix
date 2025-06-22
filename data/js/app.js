@@ -4,9 +4,9 @@ class PixelMatrixApp {
 
     baseUrl = '';
 
-    constructor(isRunningOnESP) {
+    constructor() {
         // Determine the base URL based on whether it's running on ESP or locally
-        if (!isRunningOnESP) {
+        if (!window.isRunningOnESP) {
             this.baseUrl = 'http://localhost:8080';
         } else {
             // When running on ESP, paths are relative, so baseUrl can be empty
@@ -232,5 +232,5 @@ function restartDevice() {
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    window.app = new PixelMatrixApp(false);
+    window.app = new PixelMatrixApp();
 });

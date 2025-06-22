@@ -166,12 +166,16 @@
         </div>
     </div>
 
+    <script src="js/environment.js"></script>
     <script>
         // Global variables
         let currentPath = '/';
         let currentRenameItem = null;
         let currentMoveItem = null;
-        const baseUrl = 'http://localhost:8080'; // Adjust if needed
+        
+        // Use the environment detection
+        const baseUrl = window.isRunningOnESP ? '' : 'http://localhost:8080';
+        console.log('Base URL for file management:', baseUrl);
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function () {

@@ -33,7 +33,10 @@ void addCorsHeaders() {
 
 // Function to serve files from SD card
 bool handleFileRead(String path) {
-    Serial.println("handleFileRead: " + path);
+    // Only log for actual file requests, not common static files
+    if (!path.endsWith(".ico") && !path.endsWith(".css") && !path.endsWith(".js")) {
+        Serial.println("handleFileRead: " + path);
+    }
     
     if (path.endsWith("/")) {
         path += "index.html";
@@ -67,7 +70,10 @@ bool handleFileRead(String path) {
         }
     }
     
-    Serial.println("File Not Found: " + fullPath);
+    // Only log file not found for non-static files
+    if (!path.endsWith(".ico") && !path.endsWith(".css") && !path.endsWith(".js")) {
+        Serial.println("File Not Found: " + fullPath);
+    }
     return false;
 }
 
@@ -101,49 +107,49 @@ void setupWebAPI() {
 
     // Handle OPTIONS preflight requests for all paths (important for CORS)
     server.on("/", HTTP_OPTIONS, []() { // Handle OPTIONS for root
-        Serial.println("OPTIONS / called");
+        // Serial.println("OPTIONS / called");
         addCorsHeaders();
         server.send(204); // Send 204 No Content for preflight
     });
     server.on("/api/status", HTTP_OPTIONS, []() { // Handle OPTIONS for status API
-        Serial.println("OPTIONS /api/status called");
+        // Serial.println("OPTIONS /api/status called");
         addCorsHeaders();
         server.send(204);
     });
     server.on("/api/brightness/increase", HTTP_OPTIONS, []() { // Handle OPTIONS for brightness increase
-        Serial.println("OPTIONS /api/brightness/increase called");
+        // Serial.println("OPTIONS /api/brightness/increase called");
         addCorsHeaders();
         server.send(204);
     });
     server.on("/api/brightness/decrease", HTTP_OPTIONS, []() { // Handle OPTIONS for brightness decrease
-        Serial.println("OPTIONS /api/brightness/decrease called");
+        // Serial.println("OPTIONS /api/brightness/decrease called");
         addCorsHeaders();
         server.send(204);
     });
     server.on("/api/brightness/set", HTTP_OPTIONS, []() { // Handle OPTIONS for brightness set
-        Serial.println("OPTIONS /api/brightness/set called");
+        // Serial.println("OPTIONS /api/brightness/set called");
         addCorsHeaders();
         server.send(204);
     });
     server.on("/api/wifi/reset", HTTP_OPTIONS, []() { // Handle OPTIONS for WiFi reset
-        Serial.println("OPTIONS /api/wifi/reset called");
+        // Serial.println("OPTIONS /api/wifi/reset called");
         addCorsHeaders();
         server.send(204);
     });
     server.on("/api/restart", HTTP_OPTIONS, []() { // Handle OPTIONS for restart
-        Serial.println("OPTIONS /api/restart called");
+        // Serial.println("OPTIONS /api/restart called");
         addCorsHeaders();
         server.send(204);
     });
 
     // GIF upload endpoint
     server.on("/api/gif/upload", HTTP_OPTIONS, []() {
-        Serial.println("OPTIONS /api/gif/upload called");
+        // Serial.println("OPTIONS /api/gif/upload called");
         addCorsHeaders();
         server.send(204);
     });
     server.on("/api/gif/upload", HTTP_POST, []() {
-        Serial.println("POST /api/gif/upload called");
+        // Serial.println("POST /api/gif/upload called");
         addCorsHeaders();
         if (server.hasArg("filename")) {
             String filename = server.arg("filename");
@@ -302,16 +308,27 @@ void setupWebAPI() {
 
     // Serve static files from SD card
     server.onNotFound([]() {
-        Serial.println("404 Not Found: " + server.uri());
-        if (!handleFileRead(server.uri())) {
-            String json = "{\"status\":\"error\",\"message\":\"File not found\"}";
+        // Only log 404s for actual API requests, not static files
+        String uri = server.uri();
+        if (uri.startsWith("/api/")) {
+            Serial.println("404 API Not Found: " + uri);
+            String json = "{\"status\":\"error\",\"message\":\"API endpoint not found\"}";
             server.send(404, "application/json", json);
+        } else {
+            // For static files, try to serve from SD card without logging
+            if (!handleFileRead(uri)) {
+                // Only log if it's not a common static file request
+                if (!uri.endsWith(".ico") && !uri.endsWith(".css") && !uri.endsWith(".js")) {
+                    Serial.println("404 File Not Found: " + uri);
+                }
+                server.send(404, "text/plain", "File not found");
+            }
         }
     });
     
     // Root endpoint - serve index.html from SD card
     server.on("/", HTTP_GET, []() {
-        Serial.println("GET / called");
+        // Serial.println("GET / called");
         if (!handleFileRead("/index.html")) {
             server.send(500, "text/plain", "Failed to load index.html");
         }
@@ -319,7 +336,7 @@ void setupWebAPI() {
 
     // Status endpoint
     server.on("/api/status", HTTP_GET, []() {
-        Serial.println("GET /api/status called");
+        // Serial.println("GET /api/status called");
         addCorsHeaders();
         String json = "{";
         json += "\"status\":\"connected\",";
@@ -335,7 +352,7 @@ void setupWebAPI() {
 
     // Brightness control endpoints
     server.on("/api/brightness/increase", HTTP_GET, []() {
-        Serial.println("GET /api/brightness/increase called");
+        // Serial.println("GET /api/brightness/increase called");
         int oldBrightness = brightness;
         brightness = min(255, brightness + 25);
         dma_display->setBrightness8(brightness);

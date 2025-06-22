@@ -35,7 +35,7 @@
 param
 (
     [string]$DataFolderPath = "..\data",
-    [string]$TargetUrl = "http://192.168.10.22",
+    [string]$TargetUrl = "http://matrix.local",
     [bool]$SkipExisting = $false
 )
 
@@ -104,6 +104,12 @@ function Upload-File {
     $fileName = Split-Path $FilePath -Leaf
     $fileSize = (Get-Item $FilePath).Length
     
+    #if filename is environment.js replace it with environment-esp32.js
+    if ($fileName -eq "environment.js") {
+        Write-Host "Skipping: $fileName ($fileSize bytes) to $TargetPath" -NoNewline
+        return $true
+    }
+
     Write-Host "Uploading: $fileName ($fileSize bytes) to $TargetPath" -NoNewline
     
     # Check if file already exists and skip if requested
