@@ -6,6 +6,52 @@
     <title>Pixel Matrix FX Control</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/controls.css">
+    <style>
+        .gif-control {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .playback-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .status-indicator {
+            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: 4px;
+        }
+        .status-indicator.playing {
+            background: #10b981;
+            color: white;
+        }
+        .status-indicator.paused {
+            background: #f59e0b;
+            color: white;
+        }
+        .gif-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .gif-buttons .btn {
+            flex: 1;
+            max-width: 120px;
+        }
+        .btn-accent {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+        .btn-accent:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -79,6 +125,32 @@
                         <button class="btn btn-secondary" onclick="setBrightness(20)">Medium</button>
                         <button class="btn btn-secondary" onclick="setBrightness(50)">High</button>
                         <button class="btn btn-secondary" onclick="setBrightness(100)">Max</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card control-card" id="gif-control">
+                <h2>GIF Playback Control</h2>
+                <div class="gif-control">
+                    <div class="playback-status">
+                        <span class="info-label">Playback Status:</span>
+                        <span class="info-value">
+                            <span id="playback-status" class="status-indicator">Loading...</span>
+                        </span>
+                    </div>
+                    <div class="control-buttons gif-buttons">
+                        <button class="btn btn-primary" id="play-btn" onclick="playGif()" disabled>
+                            <span class="btn-icon">▶️</span>
+                            Play
+                        </button>
+                        <button class="btn btn-secondary" id="pause-btn" onclick="pauseGif()" disabled>
+                            <span class="btn-icon">⏸️</span>
+                            Pause
+                        </button>
+                        <button class="btn btn-accent" id="toggle-btn" onclick="toggleGif()" disabled>
+                            <span class="btn-icon">⏯️</span>
+                            Toggle
+                        </button>
                     </div>
                 </div>
             </div>

@@ -788,8 +788,12 @@
             const uploadUrl = isGif ? '/api/gif/upload' : '/api/file/upload';
             
             if (!isGif) {
-              // For non-GIF files, add the path parameter
+              // For non-GIF files, add the required parameters
+              formData.append('filename', filename);
               formData.append('path', '/converted/' + filename);
+            } else {
+              // For GIF files, add the filename parameter
+              formData.append('filename', filename);
             }
             
             const response = await fetch(uploadUrl, {
@@ -797,14 +801,45 @@
               body: formData
             });
             
+            console.log('Upload response status:', response.status, response.statusText);
+            
             if (response.ok) {
-              const result = await response.json();
+              // Try to parse JSON response, but handle cases where it might not be JSON
+              let result = null;
+              const responseText = await response.text();
+              console.log('Response text:', responseText);
+              
+              if (responseText.trim()) {
+                try {
+                  result = JSON.parse(responseText);
+                } catch (parseError) {
+                  console.warn('Response is not valid JSON:', parseError);
+                  result = { status: 'success', message: 'Upload completed' };
+                }
+              } else {
+                result = { status: 'success', message: 'Upload completed' };
+              }
+              
               console.log('Successfully saved to SD card:', result);
               this.showNotification('✅ Saved to SD card successfully!', 'success');
             } else {
-              const error = await response.json();
-              console.error('Failed to save to SD card:', error);
-              this.showNotification('❌ Failed to save to SD card: ' + error.message, 'error');
+              // Handle error responses
+              let errorMessage = 'Upload failed';
+              try {
+                const responseText = await response.text();
+                console.log('Error response text:', responseText);
+                
+                if (responseText.trim()) {
+                  const error = JSON.parse(responseText);
+                  errorMessage = error.message || errorMessage;
+                }
+              } catch (parseError) {
+                console.warn('Error response is not valid JSON:', parseError);
+                errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+              }
+              
+              console.error('Failed to save to SD card:', errorMessage);
+              this.showNotification('❌ Failed to save to SD card: ' + errorMessage, 'error');
             }
           } catch (error) {
             console.error('Error saving to SD card:', error);

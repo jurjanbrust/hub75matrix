@@ -151,6 +151,9 @@ class PixelMatrixApp {
                     brightnessElement.textContent = data.brightness;
                 }
                 
+                // Update GIF playback status
+                this.updateGifPlaybackStatus(data.gif_playback_enabled);
+                
                 // Update the status bar as well
                 this.showMessage('Connected', 'connected', true); // Use 'connected' type for green
                 console.log('Status updated:', data);
@@ -192,6 +195,102 @@ class PixelMatrixApp {
         }
     }
 
+    // Update GIF playback status display
+    updateGifPlaybackStatus(isEnabled) {
+        const statusElement = document.getElementById('playback-status');
+        const playBtn = document.getElementById('play-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const toggleBtn = document.getElementById('toggle-btn');
+        
+        if (statusElement) {
+            statusElement.textContent = isEnabled ? 'Playing' : 'Paused';
+            statusElement.className = 'status-indicator ' + (isEnabled ? 'playing' : 'paused');
+        }
+        
+        // Enable buttons after first status update
+        if (playBtn) playBtn.disabled = false;
+        if (pauseBtn) pauseBtn.disabled = false;
+        if (toggleBtn) toggleBtn.disabled = false;
+    }
+
+    // Play GIF
+    async playGif() {
+        try {
+            this.showLoading('play-btn');
+            
+            const response = await fetch(this.baseUrl + '/api/gif/play', {
+                method: 'GET'
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === 'success' || data.status === 'info') {
+                this.updateGifPlaybackStatus(data.playback_enabled);
+                this.showMessage(data.message, 'success');
+                console.log('GIF playback started:', data);
+            } else {
+                this.showMessage('Error: ' + data.message, 'error');
+            }
+        } catch (error) {
+            this.showMessage('Request failed: ' + error.message, 'error');
+            console.error('Play GIF request failed:', error);
+        } finally {
+            this.hideLoading('play-btn');
+        }
+    }
+
+    // Pause GIF
+    async pauseGif() {
+        try {
+            this.showLoading('pause-btn');
+            
+            const response = await fetch(this.baseUrl + '/api/gif/pause', {
+                method: 'GET'
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === 'success' || data.status === 'info') {
+                this.updateGifPlaybackStatus(data.playback_enabled);
+                this.showMessage(data.message, 'success');
+                console.log('GIF playback paused:', data);
+            } else {
+                this.showMessage('Error: ' + data.message, 'error');
+            }
+        } catch (error) {
+            this.showMessage('Request failed: ' + error.message, 'error');
+            console.error('Pause GIF request failed:', error);
+        } finally {
+            this.hideLoading('pause-btn');
+        }
+    }
+
+    // Toggle GIF playback
+    async toggleGif() {
+        try {
+            this.showLoading('toggle-btn');
+            
+            const response = await fetch(this.baseUrl + '/api/gif/toggle', {
+                method: 'GET'
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                this.updateGifPlaybackStatus(data.playback_enabled);
+                this.showMessage(data.message, 'success');
+                console.log('GIF playback toggled:', data);
+            } else {
+                this.showMessage('Error: ' + data.message, 'error');
+            }
+        } catch (error) {
+            this.showMessage('Request failed: ' + error.message, 'error');
+            console.error('Toggle GIF request failed:', error);
+        } finally {
+            this.hideLoading('toggle-btn');
+        }
+    }
+
     // Show message to user using the status bar
     showMessage(message, type = 'info', isStatusBarUpdate = false) {
         const statusValueElement = document.querySelector('.status-bar .status-value');
@@ -228,6 +327,18 @@ function resetWiFi() {
 
 function restartDevice() {
     window.app.restartDevice();
+}
+
+function playGif() {
+    window.app.playGif();
+}
+
+function pauseGif() {
+    window.app.pauseGif();
+}
+
+function toggleGif() {
+    window.app.toggleGif();
 }
 
 // Initialize app when DOM is loaded

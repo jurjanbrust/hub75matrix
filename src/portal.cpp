@@ -37,7 +37,7 @@ void setupWifi() {
     } 
     else {
         Serial.println("connected...");
-        displayStatus(dma_display, "WIFI connected", WiFi.localIP().toString().c_str(), dma_display->color565(0, 0, 255));
+        displayStatus(dma_display, "WIFI connected", WiFi.localIP().toString().c_str(), dma_display->color565(173, 216, 230));
         delay(3000);
         setupWebAPI();
     }
