@@ -42,5 +42,6 @@ bool loadNextGifBatch(MatrixPanel_I2S_DMA *dma_display);
 void clearGifFilePaths();
 void displayStatus(MatrixPanel_I2S_DMA *dma_display, const char* message, uint16_t color);
 void displayStatus(MatrixPanel_I2S_DMA *dma_display, const char* line1, const char* line2, uint16_t color);
+void displayStatus(MatrixPanel_I2S_DMA *dma_display, const char* line1, const char* line2, const char* line3, uint16_t color);
 
 #endif

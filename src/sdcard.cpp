@@ -37,6 +37,19 @@ void displayStatus(MatrixPanel_I2S_DMA *dma_display, const char* line1, const ch
     dma_display->print(line2);
 }
 
+void displayStatus(MatrixPanel_I2S_DMA *dma_display, const char* line1, const char* line2, const char* line3, uint16_t color) {
+    if (dma_display == nullptr) return;
+
+    dma_display->fillScreen(dma_display->color565(0, 0, 0));
+    dma_display->setTextSize(1);
+    dma_display->setTextColor(color);
+    dma_display->setCursor(10, 2);
+    dma_display->print(line1);
+    dma_display->setCursor(10, 12);
+    dma_display->print(line2);
+    dma_display->setCursor(10, 22);
+    dma_display->print(line3);
+}
 // Utility to clear the paths and free memory
 void clearGifFilePaths() {
     for (char* path : gifFilePaths) {

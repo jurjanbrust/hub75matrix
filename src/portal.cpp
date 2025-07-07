@@ -12,7 +12,7 @@ AsyncWebServer server(80);
 WiFiManager wm;
 
 void apModeCallback(WiFiManager *myWiFiManager) {
-    displayStatus(dma_display, "Setup WiFi Connect", "with: PixelMatrixFX", dma_display->color565(255, 255, 0));
+    displayStatus(dma_display, "Setup WiFi. Connect", "to: PixelMatrixFX", "Password: matrixfx",  dma_display->color565(173, 216, 230));
 }
 
 void setupWifi() {
@@ -24,15 +24,17 @@ void setupWifi() {
         Serial.println("LittleFS initialized successfully");
     }
     
-    wm.setClass("invert");
+    //wm.setClass("invert");
+    //wm.setConfigPortalBlocking(false);
+    wm.setConfigPortalTimeout(120);
     wm.setAPCallback(apModeCallback);
 
     // WiFi connection setup
     bool res;
-    res = wm.autoConnect("PixelMatrixFX","password");
+    res = wm.autoConnect("PixelMatrixFX","matrixfx");
     if(!res) {
         Serial.println("Failed to connect");
-        displayStatus(dma_display, "failed to connected...", WiFi.localIP().toString().c_str(), dma_display->color565(255, 0, 0));
+        displayStatus(dma_display, "Failed to connect", "to WIFI", dma_display->color565(255, 0, 0));
         delay(3000);
     } 
     else {
