@@ -2,6 +2,7 @@
 #include "globals.h"
 #include "sdcard.h"
 #include "settings.h"
+#include "LittleFS.h"
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 
@@ -151,10 +152,11 @@ void setupAPIEndpoints() {
     },
     // Upload handler for general files
     [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-        static FsFile uploadFile;
+        static File uploadFile;
         static String uploadFilename;
         static String uploadPath;
         static bool uploadError = false;
+        static bool useSD = false;
         
         if (index == 0) {
             uploadError = false;
@@ -162,49 +164,96 @@ void setupAPIEndpoints() {
             uploadFilename = filename;
             uploadPath = request->getParam("path", true)->value();
             
-            // Ensure the target directory exists
-            String dirPath = uploadPath;
-            int lastSlash = dirPath.lastIndexOf('/');
-            if (lastSlash > 0) {
-                String parentDir = dirPath.substring(0, lastSlash);
-                if (!sd.exists(parentDir.c_str())) {
-                    if (!sd.mkdir(parentDir.c_str())) {
-                        Serial.println("Failed to create directory: " + parentDir);
-                        request->send(507, "application/json", "{\"status\":\"error\",\"message\":\"Failed to create directory\"}");
-                        uploadError = true;
-                        return;
+            // Determine if this should go to SD card or LittleFS
+            // Web files (HTML, CSS, JS) go to LittleFS, everything else to SD
+            String extension = uploadPath.substring(uploadPath.lastIndexOf('.'));
+            extension.toLowerCase();
+            useSD = !(extension == ".html" || extension == ".css" || extension == ".js" || 
+                     extension == ".ico" || extension == ".svg" || extension == ".png" || 
+                     extension == ".jpg" || extension == ".jpeg");
+            
+            if (useSD) {
+                // Use SD card for non-web files
+                String dirPath = uploadPath;
+                int lastSlash = dirPath.lastIndexOf('/');
+                if (lastSlash > 0) {
+                    String parentDir = dirPath.substring(0, lastSlash);
+                    if (!sd.exists(parentDir.c_str())) {
+                        if (!sd.mkdir(parentDir.c_str())) {
+                            Serial.println("Failed to create directory: " + parentDir);
+                            request->send(507, "application/json", "{\"status\":\"error\",\"message\":\"Failed to create directory\"}");
+                            uploadError = true;
+                            return;
+                        }
                     }
                 }
+                
+                // Remove existing file if it exists
+                if (sd.exists(uploadPath.c_str())) {
+                    sd.remove(uploadPath.c_str());
+                }
+                
+                FsFile sdFile = sd.open(uploadPath.c_str(), O_WRONLY | O_CREAT | O_TRUNC);
+                if (!sdFile) {
+                    Serial.println("SD card error or full: " + uploadPath);
+                    request->send(507, "application/json", "{\"status\":\"error\",\"message\":\"SD card error or full\"}");
+                    uploadError = true;
+                    return;
+                }
+                // We'll handle SD writes differently, store the file handle
+            } else {
+                // Use LittleFS for web files
+                // Remove existing file if it exists
+                if (LittleFS.exists(uploadPath)) {
+                    LittleFS.remove(uploadPath);
+                }
+                
+                uploadFile = LittleFS.open(uploadPath, "w");
+                if (!uploadFile) {
+                    Serial.println("LittleFS error or full: " + uploadPath);
+                    request->send(507, "application/json", "{\"status\":\"error\",\"message\":\"LittleFS error or full\"}");
+                    uploadError = true;
+                    return;
+                }
             }
-            
-            // Remove existing file if it exists
-            if (sd.exists(uploadPath.c_str())) {
-                sd.remove(uploadPath.c_str());
-            }
-            
-            uploadFile = sd.open(uploadPath.c_str(), O_WRONLY | O_CREAT | O_TRUNC);
-            if (!uploadFile) {
-                Serial.println("SD card error or full: " + uploadPath);
-                request->send(507, "application/json", "{\"status\":\"error\",\"message\":\"SD card error or full\"}");
-                uploadError = true;
-                return;
-            }
-            Serial.println("Upload start: " + uploadPath);
+            Serial.println("Upload start: " + uploadPath + (useSD ? " (SD)" : " (LittleFS)"));
         }
         
-        if (uploadFile && !uploadError && len > 0) {
-            int written = uploadFile.write(data, len);
-            if (written != len) {
-                Serial.println("Write error during upload: " + uploadFilename);
-                uploadFile.close();
-                request->send(507, "application/json", "{\"status\":\"error\",\"message\":\"Write error during upload\"}");
-                uploadError = true;
+        if (!uploadError && len > 0) {
+            if (useSD) {
+                // Handle SD card writes
+                FsFile sdFile = sd.open(uploadPath.c_str(), O_WRONLY | O_APPEND);
+                if (sdFile) {
+                    int written = sdFile.write(data, len);
+                    sdFile.close();
+                    if (written != len) {
+                        Serial.println("Write error during upload: " + uploadFilename);
+                        request->send(507, "application/json", "{\"status\":\"error\",\"message\":\"Write error during upload\"}");
+                        uploadError = true;
+                    }
+                } else {
+                    Serial.println("Failed to open SD file for writing: " + uploadPath);
+                    uploadError = true;
+                }
+            } else {
+                // Handle LittleFS writes
+                if (uploadFile) {
+                    int written = uploadFile.write(data, len);
+                    if (written != len) {
+                        Serial.println("Write error during upload: " + uploadFilename);
+                        uploadFile.close();
+                        request->send(507, "application/json", "{\"status\":\"error\",\"message\":\"Write error during upload\"}");
+                        uploadError = true;
+                    }
+                }
             }
         }
         
         if (final) {
-            if (uploadFile && !uploadError) {
-                uploadFile.close();
+            if (!uploadError) {
+                if (!useSD && uploadFile) {
+                    uploadFile.close();
+                }
                 Serial.println("Upload complete: " + uploadPath);
             }
         }

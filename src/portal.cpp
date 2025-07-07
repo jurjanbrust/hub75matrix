@@ -16,7 +16,13 @@ void apModeCallback(WiFiManager *myWiFiManager) {
 }
 
 void setupWifi() {
-    // Remove LittleFS initialization since we're not using it anymore
+    // Initialize LittleFS for web files
+    if (!LittleFS.begin(true)) {
+        Serial.println("LittleFS initialization failed!");
+        // Fall back to SD card for everything if LittleFS fails
+    } else {
+        Serial.println("LittleFS initialized successfully");
+    }
     
     wm.setClass("invert");
     wm.setAPCallback(apModeCallback);
@@ -41,13 +47,13 @@ void setupWebAPI() {
     // Setup API endpoints
     setupAPIEndpoints();
 
-    // Root endpoint - serve index.html from SD card
+    // Root endpoint - serve index.html from LittleFS
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         Serial.println("GET / called - serving index.html");
-        String path = "/data/index.html";
+        String path = "/index.html";
         
-        if (sd.exists(path.c_str())) {
-            FsFile file = sd.open(path.c_str(), O_RDONLY);
+        if (LittleFS.exists(path)) {
+            File file = LittleFS.open(path, "r");
             if (file) {
                 String content = file.readString();
                 file.close();
@@ -74,43 +80,8 @@ void setupWebAPI() {
         }
     });
 
-    // Serve static files (CSS, JS, images)
-    server.onNotFound([](AsyncWebServerRequest *request) {
-        String uri = request->url();
-        Serial.println("=== Static File Request ===");
-        Serial.println("Requested URI: " + uri);
-        
-        // Skip API requests
-        if (uri.startsWith("/api/")) {
-            request->send(404, "text/plain", "API endpoint not found");
-            return;
-        }
-        
-        // Serve static files from /data directory
-        String path = "/data" + uri;
-        String contentType = getContentType(uri);
-        
-        if (sd.exists(path.c_str())) {
-            FsFile file = sd.open(path.c_str(), O_RDONLY);
-            if (file) {
-                String content = file.readString();
-                file.close();
-                
-                // Add CORS headers for all static files
-                AsyncWebServerResponse *response = request->beginResponse(200, contentType, content);
-                response->addHeader("Access-Control-Allow-Origin", "*");
-                response->addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-                response->addHeader("Access-Control-Allow-Headers", "Content-Type, X-Requested-With");
-                request->send(response);
-            } else {
-                Serial.println("Failed to open file: " + uri);
-                request->send(500, "text/plain", "Failed to open file: " + uri);
-            }
-        } else {
-            Serial.println("File not found: " + path);
-            request->send(404, "text/plain", "File not found: " + uri);
-        }
-    });
+    // Serve static files (CSS, JS, images) from LittleFS using built-in handler
+    server.serveStatic("/", LittleFS, "/", "max-age=86400");
 
     server.begin();
     Serial.println("Web API server started on port 80");
