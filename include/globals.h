@@ -61,6 +61,7 @@ extern bool autoPlay;
 extern bool gifPlaying;
 extern bool allowNextGif;
 extern bool queue_populate_requred;
+extern bool gifPlaybackEnabled;
 extern unsigned long total_files;
 extern String current_gif;
 

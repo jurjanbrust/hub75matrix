@@ -6,6 +6,29 @@
     <title>Image to 128x32 Editor</title>
     <link rel="stylesheet" href="css/style.css" />
     <link rel="stylesheet" href="css/converter.css" />
+    <style>
+      .download-options {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .save-option {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9em;
+        color: #666;
+      }
+      .save-option label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+      }
+      .save-option input[type="checkbox"] {
+        transform: scale(1.2);
+      }
+    </style>
     <script src="/js/gif.js"></script>
   </head>
   <body>
@@ -164,9 +187,17 @@
                 Rendering GIF: 0%
               </div>
             </div>
-            <button class="btn btn-download" id="downloadBtn">
-              Download 128×32 Image
-            </button>
+            <div class="download-options">
+              <button class="btn btn-download" id="downloadBtn">
+                Download 128×32 Image
+              </button>
+              <div class="save-option">
+                <label>
+                  <input type="checkbox" id="saveToSD" />
+                  Also save to SD card
+                </label>
+              </div>
+            </div>
           </div>
 
           <div id="stats" class="stats hidden">
@@ -608,11 +639,19 @@
           } else {
             console.log("Static image download requested.");
             const link = document.createElement("a");
-            link.download = "image_128x32.jpg";
+            const originalName = this.originalFile.name.split('.')[0];
+            const filename = `${originalName}_128x32.jpg`;
+            link.download = filename;
             link.href = this.resultDataUrl;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            
+            // Check if user wants to save to SD card
+            const saveToSD = document.getElementById("saveToSD").checked;
+            if (saveToSD) {
+              this.saveToSDCard(this.resultDataUrl, filename);
+            }
           }
         }
 
@@ -687,11 +726,20 @@
               console.log("GIF rendering finished, starting download.");
               var url = URL.createObjectURL(blob);
               var link = document.createElement("a");
-              link.download = "animation_128x32.gif";
+              var originalName = self.originalFile.name.split('.')[0];
+              var filename = originalName + "_128x32.gif";
+              link.download = filename;
               link.href = url;
               document.body.appendChild(link);
               link.click();
               document.body.removeChild(link);
+              
+              // Check if user wants to save to SD card
+              var saveToSD = document.getElementById("saveToSD").checked;
+              if (saveToSD) {
+                self.saveToSDCard(blob, filename);
+              }
+              
               URL.revokeObjectURL(url);
             });
             gif.on("progress", function (p) {
@@ -714,6 +762,87 @@
             );
             gif.render();
           });
+        }
+
+        async saveToSDCard(data, filename) {
+          try {
+            console.log("Saving to SD card:", filename);
+            
+            // Convert data URL to blob if needed
+            let blob;
+            if (typeof data === 'string') {
+              // It's a data URL
+              const response = await fetch(data);
+              blob = await response.blob();
+            } else {
+              // It's already a blob
+              blob = data;
+            }
+            
+            // Create form data for upload
+            const formData = new FormData();
+            formData.append('file', blob, filename);
+            
+            // Determine the upload endpoint based on file type
+            const isGif = filename.toLowerCase().endsWith('.gif');
+            const uploadUrl = isGif ? '/api/gif/upload' : '/api/file/upload';
+            
+            if (!isGif) {
+              // For non-GIF files, add the path parameter
+              formData.append('path', '/converted/' + filename);
+            }
+            
+            const response = await fetch(uploadUrl, {
+              method: 'POST',
+              body: formData
+            });
+            
+            if (response.ok) {
+              const result = await response.json();
+              console.log('Successfully saved to SD card:', result);
+              this.showNotification('✅ Saved to SD card successfully!', 'success');
+            } else {
+              const error = await response.json();
+              console.error('Failed to save to SD card:', error);
+              this.showNotification('❌ Failed to save to SD card: ' + error.message, 'error');
+            }
+          } catch (error) {
+            console.error('Error saving to SD card:', error);
+            this.showNotification('❌ Error saving to SD card: ' + error.message, 'error');
+          }
+        }
+
+        showNotification(message, type) {
+          // Create notification element
+          const notification = document.createElement('div');
+          notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'success' ? '#10b981' : '#ef4444'};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 1000;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+          `;
+          notification.textContent = message;
+          
+          document.body.appendChild(notification);
+          
+          // Remove notification after 3 seconds
+          setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+              if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+              }
+            }, 300);
+          }, 3000);
         }
       }
 

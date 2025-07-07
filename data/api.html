@@ -39,7 +39,7 @@
                     <div class="api-item">
                         <span class="api-method get">GET</span>
                         <a href="/api/status" class="api-endpoint">/api/status</a>
-                        <span class="api-description">Get device status</span>
+                        <span class="api-description">Get device status including GIF playback state</span>
                     </div>
                     <div class="api-item">
                         <span class="api-method get">GET</span>
@@ -75,6 +75,29 @@
                         <span class="api-method post">POST</span>
                         <span class="api-endpoint">/api/file/upload</span>
                         <span class="api-description">Upload any file to a specified path</span>
+                    </div>
+                </div>
+                <h2 style="margin-top:2em;">GIF Playback Control APIs</h2>
+                <div class="api-list">
+                    <div class="api-item">
+                        <span class="api-method get">GET</span>
+                        <a href="/api/gif/play" class="api-endpoint">/api/gif/play</a>
+                        <span class="api-description">Start/resume GIF playback</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method get">GET</span>
+                        <a href="/api/gif/pause" class="api-endpoint">/api/gif/pause</a>
+                        <span class="api-description">Pause GIF playback</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method get">GET</span>
+                        <a href="/api/gif/stop" class="api-endpoint">/api/gif/stop</a>
+                        <span class="api-description">Stop GIF playback</span>
+                    </div>
+                    <div class="api-item">
+                        <span class="api-method get">GET</span>
+                        <a href="/api/gif/toggle" class="api-endpoint">/api/gif/toggle</a>
+                        <span class="api-description">Toggle GIF playback (play/pause)</span>
                     </div>
                 </div>
                 <h2 style="margin-top:2em;">File Management APIs</h2>

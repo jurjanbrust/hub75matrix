@@ -61,6 +61,20 @@ void setupAPIEndpoints() {
         request->send(204);
     });
 
+    // GIF playback control OPTIONS handlers
+    server.on("/api/gif/play", HTTP_OPTIONS, [](AsyncWebServerRequest *request) {
+        request->send(204);
+    });
+    server.on("/api/gif/pause", HTTP_OPTIONS, [](AsyncWebServerRequest *request) {
+        request->send(204);
+    });
+    server.on("/api/gif/stop", HTTP_OPTIONS, [](AsyncWebServerRequest *request) {
+        request->send(204);
+    });
+    server.on("/api/gif/toggle", HTTP_OPTIONS, [](AsyncWebServerRequest *request) {
+        request->send(204);
+    });
+
     // GIF upload endpoint
     server.on("/api/gif/upload", HTTP_OPTIONS, [](AsyncWebServerRequest *request) {
         // Serial.println("OPTIONS /api/gif/upload called");
@@ -268,7 +282,8 @@ void setupAPIEndpoints() {
         json += "\"current_gif\":\"" + current_gif + "\",";
         json += "\"free_heap\":" + String(ESP.getFreeHeap()) + ",";
         json += "\"uptime\":" + String(millis()) + ",";
-        json += "\"brightness\":" + String(brightness);
+        json += "\"brightness\":" + String(brightness) + ",";
+        json += "\"gif_playback_enabled\":" + String(gifPlaybackEnabled ? "true" : "false");
         json += "}";
         request->send(200, "application/json", json);
     });
@@ -357,6 +372,50 @@ void setupAPIEndpoints() {
         
         delay(3000);
         ESP.restart();
+    });
+
+    // GIF playback control endpoints
+    server.on("/api/gif/play", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (!gifPlaybackEnabled) {
+            gifPlaybackEnabled = true;
+            saveGifPlaybackToPreferences();
+            Serial.println("GIF playback enabled via API");
+            String json = "{\"status\":\"success\",\"message\":\"GIF playback started\",\"playback_enabled\":true}";
+            request->send(200, "application/json", json);
+        } else {
+            String json = "{\"status\":\"info\",\"message\":\"GIF playback is already running\",\"playback_enabled\":true}";
+            request->send(200, "application/json", json);
+        }
+    });
+
+    server.on("/api/gif/pause", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (gifPlaybackEnabled) {
+            gifPlaybackEnabled = false;
+            saveGifPlaybackToPreferences();
+            Serial.println("GIF playback paused via API");
+            String json = "{\"status\":\"success\",\"message\":\"GIF playback paused\",\"playback_enabled\":false}";
+            request->send(200, "application/json", json);
+        } else {
+            String json = "{\"status\":\"info\",\"message\":\"GIF playback is already paused\",\"playback_enabled\":false}";
+            request->send(200, "application/json", json);
+        }
+    });
+
+    server.on("/api/gif/stop", HTTP_GET, [](AsyncWebServerRequest *request) {
+        gifPlaybackEnabled = false;
+        saveGifPlaybackToPreferences();
+        Serial.println("GIF playback stopped via API");
+        String json = "{\"status\":\"success\",\"message\":\"GIF playback stopped\",\"playback_enabled\":false}";
+        request->send(200, "application/json", json);
+    });
+
+    server.on("/api/gif/toggle", HTTP_GET, [](AsyncWebServerRequest *request) {
+        gifPlaybackEnabled = !gifPlaybackEnabled;
+        saveGifPlaybackToPreferences();
+        const char* action = gifPlaybackEnabled ? "started" : "paused";
+        Serial.printf("GIF playback %s via API\n", action);
+        String json = "{\"status\":\"success\",\"message\":\"GIF playback " + String(action) + "\",\"playback_enabled\":" + String(gifPlaybackEnabled ? "true" : "false") + "}";
+        request->send(200, "application/json", json);
     });
 
     // List files in a directory

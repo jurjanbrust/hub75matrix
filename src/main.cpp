@@ -18,6 +18,7 @@ bool autoPlay = true;
 bool gifPlaying = false;
 bool allowNextGif = true;
 bool queue_populate_requred = false;
+bool gifPlaybackEnabled = true;
 
 // Matrix display pointer
 MatrixPanel_I2S_DMA *dma_display = nullptr;
@@ -36,8 +37,9 @@ void setup() {
 
     Serial.println("Initializing HUB75 Matrix Display...");
 
-    // Load brightness from preferences before initializing display
+    // Load brightness and GIF playback state from preferences before initializing display
     loadBrightnessFromPreferences();
+    loadGifPlaybackFromPreferences();
 
     HUB75_I2S_CFG::i2s_pins _pins={R1_PIN, G1_PIN, B1_PIN, R2_PIN, G2_PIN, B2_PIN, A_PIN, B_PIN, C_PIN, D_PIN, E_PIN, LAT_PIN, OE_PIN, CLK_PIN};
 
@@ -130,6 +132,20 @@ void loop() {
         for (size_t i = 0; i < gifFilePaths.size(); i++) {
             const char* path = gifFilePaths[i];
             current_gif = String(path);
+            
+            // Check if GIF playback is enabled
+            if (!gifPlaybackEnabled) {
+                Serial.println("GIF playback is disabled, pausing...");
+                dma_display->clearScreen();
+                displayStatus(dma_display, "GIF Playback", "PAUSED", dma_display->color565(255, 165, 0));
+                
+                // Wait until playback is re-enabled
+                while (!gifPlaybackEnabled) {
+                    delay(100);
+                    yield(); // Allow other tasks to run
+                }
+                Serial.println("GIF playback resumed");
+            }
             
             // Display progress on matrix
             if(SHOW_PROGRESS) {

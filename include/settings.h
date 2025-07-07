@@ -7,5 +7,7 @@ extern Preferences preferences;
 
 void loadBrightnessFromPreferences();
 void saveBrightnessToPreferences();
+void loadGifPlaybackFromPreferences();
+void saveGifPlaybackToPreferences();
 
 #endif
