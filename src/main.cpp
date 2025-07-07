@@ -39,11 +39,14 @@ void setup() {
     // Load brightness from preferences before initializing display
     loadBrightnessFromPreferences();
 
+    HUB75_I2S_CFG::i2s_pins _pins={R1_PIN, G1_PIN, B1_PIN, R2_PIN, G2_PIN, B2_PIN, A_PIN, B_PIN, C_PIN, D_PIN, E_PIN, LAT_PIN, OE_PIN, CLK_PIN};
+
     // Initialize HUB75 display first
     HUB75_I2S_CFG mxconfig(
         PANEL_RES_X,    // module width
         PANEL_RES_Y,    // module height
-        PANEL_CHAIN     // Chain of panels - Horizontal width only.
+        PANEL_CHAIN,     // Chain of panels - Horizontal width only.
+        _pins
     );
 
     // Display Setup
@@ -99,20 +102,13 @@ void setup() {
 }
 
 void loop() {
-    // Handle web API requests more frequently
-    handleWebAPIRequests();
-    
     if (total_gifs_count == 0) {
         Serial.println("No GIFs found. Looping...");
         delay(1000); // Reduced from 5000ms
         return;
     }
 
-    // Main batch processing loop
     while (true) {
-        // Handle web API requests more frequently during GIF processing
-        handleWebAPIRequests();
-        
         // Check if we need to start over from the beginning
         if (current_batch_start >= total_gifs_count) {
             Serial.println("Completed all GIFs! Starting over from the beginning...");
@@ -147,7 +143,6 @@ void loop() {
             delay(50); // Reduced from 100ms
             
             yield(); // Allow other tasks to run
-            handleWebAPIRequests(); // Handle API requests between GIFs
         }
 
         // Move to the next batch
@@ -161,4 +156,7 @@ void loop() {
         // Show memory status
         Serial.printf("Free heap after batch: %lu bytes\n", ESP.getFreeHeap());
     }
+    
+    // Simple loop that just handles web requests and shows status
+    delay(100);
 }

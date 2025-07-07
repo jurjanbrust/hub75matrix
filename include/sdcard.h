@@ -16,6 +16,12 @@
 #define BATCH_SIZE 10
 #define MAX_GIF_PATH_LEN 256
 
+// SD Card pin definitions
+#define SD_CS_PIN    4    // SD card chip select pin
+#define SD_MISO_PIN  21    // SD card MISO pin
+#define SD_MOSI_PIN  22    // SD card MOSI pin  
+#define SD_SCK_PIN   15    // SD card SCK pin
+
 // Global SD-related variables
 extern SdFs sd;
 extern bool sdError;

@@ -20,14 +20,23 @@
 #define PANEL_RES_Y 32     // Number of pixels tall of each INDIVIDUAL panel module.
 #define PANEL_CHAIN 2      // Total number of panels chained one to another horizontally only.
 
-// SD Card pin definitions
-#define SD_CS_PIN    22    // SD card chip select pin
-#define SD_MISO_PIN  32    // SD card MISO pin
-#define SD_MOSI_PIN  21    // SD card MOSI pin  
-#define SD_SCK_PIN   33    // SD card SCK pin
+#define R1_PIN 32
+#define G1_PIN 33
+#define B1_PIN 19
+#define R2_PIN 25
+#define G2_PIN 26
+#define B2_PIN 18
+#define A_PIN 27
+#define B_PIN 5
+#define C_PIN 14
+#define D_PIN 17
+#define E_PIN -1 // required for 1/32 scan panels, like 64x64. Any available pin would do, i.e. IO32
+#define LAT_PIN 16
+#define OE_PIN 13
+#define CLK_PIN 12
 
 // Default brightness value
-#define DEFAULT_BRIGHTNESS 128
+#define DEFAULT_BRIGHTNESS 64
 
 typedef enum {
     OFF = 0, // LED matrix is off

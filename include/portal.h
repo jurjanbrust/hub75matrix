@@ -6,6 +6,5 @@
 
 void setupWifi();
 void setupWebAPI();
-void handleWebAPIRequests();
 
 #endif
